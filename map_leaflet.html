@@ -179,6 +179,24 @@
   .cmp-search { display: flex; gap: 6px; margin-top: 8px; }
   #cmpAdd { appearance: none; flex: 0 0 auto; font: 600 11.5px var(--font-base); color: var(--accent); background: var(--accent-soft); border: 1px solid var(--hairline); border-radius: var(--r-chip); padding: 6px 12px; cursor: pointer; white-space: nowrap; transition: all .14s; }
   #cmpAdd:hover { border-color: var(--accent); background: var(--canvas); }
+  /* ── 🎯 자동 추천 (스펙 v3 §6.7) — 후보 목록은 #cmpCandidates (선택 목록 #cmpList와 분리) ── */
+  .cmp-auto { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+  .cmp-auto #cmpType { width: 68px; flex: 0 0 auto; padding: 6px 9px; border-radius: var(--r-chip); }
+  .cmp-auto-unit { font: 600 12px var(--font-base); color: var(--ink-3); flex: 0 0 auto; }
+  #cmpAuto { appearance: none; flex: 1; font: 600 11.5px var(--font-base); color: var(--accent); background: var(--accent-soft); border: 1px solid var(--hairline); border-radius: var(--r-chip); padding: 6px 12px; cursor: pointer; white-space: nowrap; transition: all .14s; }
+  #cmpAuto:hover:not(:disabled) { border-color: var(--accent); background: var(--canvas); }
+  #cmpAuto:disabled { opacity: .45; cursor: not-allowed; }
+  .cmp-note { font: 500 11.5px/1.5 var(--font-base); color: var(--ink-4); margin-top: 6px; }
+  .cmp-note:empty { display: none; }
+  #cmpCandidates:empty { display: none; }
+  .cmp-cand { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 8px; cursor: pointer; transition: background .12s; }
+  .cmp-cand:hover { background: var(--card-2); }
+  .cmp-cand input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; flex: 0 0 auto; cursor: pointer; margin: 0; }
+  .cmp-cand .cc-name { flex: 1; font: 600 12.5px var(--font-base); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .cmp-cand .cc-why { font: 500 11px var(--font-num); color: var(--ink-3); white-space: nowrap; }
+  .cmp-cand.done { opacity: .55; }
+  .cmp-cand.done input[type=checkbox] { cursor: default; }
+  .cmp-cand .cc-done { font: 700 10px var(--font-base); color: var(--accent); background: var(--accent-soft); border-radius: var(--r-chip); padding: 2px 7px; white-space: nowrap; }
   /* 번호 배지 divIcon (스펙 §4: 지름 20px 원 · 배경=단지 색 · 흰 숫자 11px Inter bold · 링 상단) */
   .cmp-badge { transform: translate(-50%, -50%); width: 20px; height: 20px; border-radius: 50%; color: #fff; font: 700 11px/1 var(--font-num); display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
   #toast { display: none; position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 900; background: rgba(25,31,40,.92); color: #fff; font-size: 12.5px; font-weight: 600; padding: 9px 18px; border-radius: var(--r-chip); box-shadow: 0 4px 16px rgba(20,24,32,.3); pointer-events: none; white-space: nowrap; }
@@ -418,6 +436,13 @@
       <div class="checks one">
         <label><input type="checkbox" id="cmpMode"> 경쟁단지 선택 모드 (마커 클릭=선택·재클릭=해제)</label>
       </div>
+      <div class="cmp-auto">
+        <input type="number" id="cmpType" min="1" step="1" aria-label="주력 타입(㎡)" title="주력 타입 전용면적(㎡) — 기본값: 최근 12개월 지역 최다 거래 타입">
+        <span class="cmp-auto-unit">㎡</span>
+        <button id="cmpAuto" type="button">자동 추천</button>
+      </div>
+      <div id="cmpAutoNote" class="cmp-note"></div>
+      <div id="cmpCandidates"></div>
       <div id="cmpList"></div>
       <div class="cmp-search">
         <input type="text" id="cmpSearch" placeholder="단지명 일부 입력 후 추가">
@@ -729,6 +754,7 @@ function renderCmp(){                      // cmpLayer 재렌더 + 패널 목록
         `<button class="cmp-x" type="button" data-i="${c.i}" title="선택 해제">✕</button>` +
         `</div>`).join("")
     : `<div class="cmp-empty">선택된 단지 없음 — 모드 ON 후 마커 클릭 또는 검색 추가</div>`;
+  renderCmpCandidates();               // 후보 목록 "선택됨" 상태 동기화 (추천 전엔 no-op)
 }
 function cmpSearchAdd(){                   // doSearch 스타일 재사용 — 단지명 substring 매칭 후 추가
   const q = $("cmpSearch").value.trim();
@@ -739,6 +765,101 @@ function cmpSearchAdd(){                   // doSearch 스타일 재사용 — �
   addCompetitor(idx, apt);
   map.setView([apt.lat, apt.lng], 16);
   $("cmpSearch").value = "";
+}
+
+// ── 🎯 자동 추천 (스펙 v3 §6.7 정본) — 순수 클라이언트 집계·외부 API 0 ──
+// window = 항상 12개월(패널 기간 셀렉트와 독립) · 직거래 제외 고정 적용(§6.6 기본 ON)
+// 결과 표시만 한다 — 선택 확정은 사용자 체크로만(자동 확정 금지 · 상한 CMP_MAX 재사용)
+let cmpLastRec = null;               // { mainType, list:[{i,name,dist,cnt,buildYear,score}] } — 체크 상태 동기화용
+function havDistM(lat1, lng1, lat2, lng2){     // haversine 표준 공식 R=6371000m (스펙 §6.1)
+  const R = 6371000, rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad, dLng = (lng2 - lng1) * rad;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+function minusMonths(dateStr, n){      // §6.1 period_start — 캘린더 개월 차감 (차감한 달에 해당 일 없으면 그 달 마지막 날)
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const tm = (m - 1) - n;
+  const ty = y + Math.floor(tm / 12), tmm = ((tm % 12) + 12) % 12;
+  const last = new Date(ty, tmm + 1, 0).getDate();
+  const p = v => String(v).padStart(2, "0");
+  return `${ty}-${p(tmm + 1)}-${p(Math.min(d, last))}`;
+}
+function cmpWindow12(){                // §6.1 max_date·window — 추천 전용 12개월 (패널 기간과 독립)
+  let maxd = "";
+  for(const t of D.trades || []) if(t.d > maxd) maxd = t.d;
+  return maxd ? { maxd, start: minusMonths(maxd, 12) } : null;   // window = start < d ≤ maxd
+}
+function cmpDefaultMainType(win){      // §6.1 main_type 기본 = window 최다 거래 타입 그룹 키 (동률 시 작은 키)
+  const freq = new Map();
+  for(const t of D.trades || []){
+    if(t.dr === 1 || !(t.d > win.start) || !(t.d <= win.maxd)) continue;
+    const k = Math.floor(t.ar);
+    freq.set(k, (freq.get(k) || 0) + 1);
+  }
+  let best = null;
+  freq.forEach((n, k) => { if(!best || n > best.n || (n === best.n && k < best.k)) best = { k, n }; });
+  return best ? best.k : null;
+}
+function recommendCompetitors(mainType){       // §6.7 — 후보 3조건 AND + score 상위 5
+  const site = D.meta && D.meta.site;
+  const win = cmpWindow12();
+  if(!site || site.lat == null || !win) return { list: [] };
+  const baseYear = Number(win.maxd.slice(0, 4));
+  const N = D.apts.length;
+  const cnt = new Int32Array(N), byMax = new Int32Array(N), mainHit = new Uint8Array(N);
+  for(const t of D.trades || []){
+    if(t.dr === 1 || !(t.d > win.start) || !(t.d <= win.maxd)) continue;   // 직거래 제외 + window
+    const i = t.a;                   // 단지 인덱스 기준 집계 — 동명이단지 자연 분리 (T6/T11 동일 매칭)
+    cnt[i]++;
+    if(t.by) byMax[i] = Math.max(byMax[i], t.by);
+    if(Math.floor(t.ar) === mainType || Math.abs(t.ar - mainType) <= 5) mainHit[i] = 1;
+  }
+  const list = [];
+  for(let i = 0; i < N; i++){
+    if(cnt[i] < 10 || !mainHit[i]) continue;               // 조건 (b) 표본 ≥10 · (c) 주력 타입 보유
+    const apt = D.apts[i];
+    const dist = havDistM(site.lat, site.lng, apt.lat, apt.lng);
+    if(dist > 2000) continue;                              // 조건 (a) 반경 2km
+    const buildYear = byMax[i];                            // 0 = by 전무 → ageScore 0 (§6.1)
+    const ageScore = !buildYear ? 0 : (buildYear >= baseYear - 10 ? 1 : Math.max(0, 1 - (baseYear - buildYear - 10) / 20));
+    const score = 0.4 * (1 - dist / 2000) + 0.3 * ageScore + 0.3 * Math.min(cnt[i] / 50, 1);
+    list.push({ i, name: apt.name, dist, cnt: cnt[i], buildYear, score });
+  }
+  list.sort((a, b) => b.score - a.score || a.dist - b.dist);
+  return { list: list.slice(0, 5), baseYear, win };
+}
+function cmpWhyText(c, mainType){      // §6.9 표시 예: "1.2km · 84㎡ 32건 · 2015년식"
+  const km = (c.dist / 1000).toFixed(1);
+  const age = c.buildYear ? c.buildYear + "년식" : "연차 정보 없음";
+  return `${km}km · ${mainType}㎡ ${c.cnt}건 · ${age}`;
+}
+function renderCmpCandidates(){        // 후보 목록 — 선택 확정된 단지는 "선택됨" 비활성 표시
+  const box = $("cmpCandidates");
+  if(!box) return;
+  if(!cmpLastRec){ box.innerHTML = ""; return; }
+  const { mainType, list } = cmpLastRec;
+  box.innerHTML = list.length
+    ? list.map(c => {
+        const done = competitors.some(x => x.i === c.i);
+        return `<label class="cmp-cand${done ? " done" : ""}" title="score ${c.score.toFixed(3)}">` +
+          `<input type="checkbox" data-i="${c.i}"${done ? " checked disabled" : ""}>` +
+          `<span class="cc-name">${c.name}</span>` +
+          `<span class="cc-why">${cmpWhyText(c, mainType)}</span>` +
+          (done ? `<span class="cc-done">선택됨</span>` : "") +
+          `</label>`;
+      }).join("")
+    : `<div class="cmp-empty">후보 없음 — 반경 2km 내 표본 ≥10 단지가 없습니다</div>`;   // 정직 표시 (지어내기 금지)
+}
+function runCmpAuto(){                 // 자동 추천 실행 — 목록 표시만, 확정 아님
+  const v = Number($("cmpType").value);
+  if(!Number.isFinite(v) || v <= 0){ showToast("주력 타입(㎡)을 입력하세요"); return; }
+  const res = recommendCompetitors(v);
+  cmpLastRec = { mainType: v, list: res.list };
+  renderCmpCandidates();
+  $("cmpAutoNote").textContent = res.list.length
+    ? `추천 ${res.list.length}개 — 반경 2km · 표본 ≥10 · 주력 ${v}㎡ · 최근 12개월 window`
+    : "";
 }
 
 // #szIcon(50~150%) → --icon-scale(0.5~1.5) 전 밴드 승산 (스펙 v3 §1)
@@ -813,6 +934,29 @@ function initMap(){
   $("cmpAdd").addEventListener("click", cmpSearchAdd);
   $("cmpSearch").addEventListener("keydown", e => { if(e.key === "Enter") cmpSearchAdd(); });
   $("cmpList").addEventListener("click", e => { const b = e.target.closest(".cmp-x"); if(b) removeCompetitor(Number(b.dataset.i)); });
+  // 🎯 자동 추천 (스펙 §6.7) — site 없는 region 번들은 비활성 + 안내 문구
+  {
+    const site = D.meta && D.meta.site;
+    if(!site || site.lat == null){
+      $("cmpAuto").disabled = true;
+      $("cmpAutoNote").textContent = "사업지 기준 추천은 로컬(루트) 모드에서만 가능합니다";
+    } else {
+      const win = cmpWindow12();
+      if(win){ const k = cmpDefaultMainType(win); if(k != null) $("cmpType").value = k; }   // 기본 = window 최다 타입 그룹
+      $("cmpAuto").addEventListener("click", runCmpAuto);
+    }
+    $("cmpCandidates").addEventListener("change", e => {     // 체크=선택 확정 · 해제=제외 (T6 경로 재사용)
+      const cb = e.target.closest("input[type=checkbox][data-i]");
+      if(!cb) return;
+      const i = Number(cb.dataset.i), apt = D.apts[i];
+      if(!apt) return;
+      if(cb.checked){
+        if(!addCompetitor(i, apt)) cb.checked = false;      // 9개 상한·중복 = toast + 체크 복원
+      } else {
+        removeCompetitor(i);
+      }
+    });
+  }
   // 임대분석: 윈도우 토글 + 비교임대료 입력
   document.querySelectorAll(".lmx-toggle button").forEach(btn => {
     btn.addEventListener("click", () => {
