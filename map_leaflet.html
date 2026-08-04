@@ -364,15 +364,30 @@
   body.report-mode #cmpCard { display: none !important; }
   body.report-mode .legend { display: none; }
   body.report-mode #basemapCtl { display: none; }
+  body.report-mode .leaflet-top.leaflet-left { display: none; }   /* 캡처 화면에 줌 컨트롤 노이즈 제거 (캡처 종료 시 자동 복귀) */
   #reportOverlay { display: none; position: absolute; top: 14px; left: 14px; z-index: 900; background: rgba(255,255,255,.96); border: 1px solid var(--hairline); border-radius: 14px; padding: 14px 18px; max-width: 380px; }
   body.report-mode #reportOverlay { display: block; }
-  #reportOverlay .r-title { font-size: 16px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 4px; }
+  #reportOverlay .r-title { font-size: 18px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 4px; }   /* 스펙 v3 §2: 캡처 오버레이 제목 18px(가독성 상향) */
   #reportOverlay .r-sub { font-size: 11px; color: var(--ink-2); line-height: 1.6; }
+  #reportOverlay .r-src { margin-top: 7px; font-size: 10px; color: var(--ink-4); }   /* 스펙 v3 §7 출처 각주 형식 */
   #reportOverlay .r-legend { margin-top: 9px; display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 10.5px; color: var(--ink-2); }
   #reportOverlay .r-legend .row { display: flex; align-items: center; gap: 4px; }
   #reportOverlay .r-legend .sw { width: 11px; height: 11px; border-radius: 3px; }
+  /* 경쟁단지 번호 범례 (스펙 v3 §4 번호 배지 = 20px 원·흰 숫자 11px·선택 순서) */
+  #reportOverlay .r-cmp { margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--hairline); display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 10.5px; color: var(--ink-2); align-items: center; }
+  #reportOverlay .r-cmp .r-cmp-t { flex-basis: 100%; font-weight: 700; }
+  #reportOverlay .r-cmp .row { display: flex; align-items: center; gap: 5px; }
+  #reportOverlay .r-cmp .rn { width: 20px; height: 20px; border-radius: 50%; color: #fff; font: 700 11px/1 var(--font-num); display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
   #reportToast { display: none; position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 900; background: rgba(25,31,40,.92); color: #fff; font-size: 12.5px; font-weight: 600; padding: 9px 18px; border-radius: var(--r-chip); cursor: pointer; transition: background .16s; box-shadow: 0 4px 16px rgba(20,24,32,.3); }
   #reportToast:hover { background: rgba(25,31,40,1); }
+  /* 비CORS 베이스맵 캡처 시도 시 전환 제안 (스펙 v3 §5) */
+  #capSuggest { display: none; position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 950; background: rgba(25,31,40,.92); color: #fff; font-size: 12.5px; font-weight: 600; padding: 8px 10px 8px 18px; border-radius: var(--r-chip); box-shadow: 0 4px 16px rgba(20,24,32,.3); align-items: center; gap: 10px; white-space: nowrap; }
+  #capSuggest.show { display: inline-flex; }
+  #capSuggest button { appearance: none; border: none; border-radius: 8px; padding: 5px 11px; font: 700 12px var(--font-base); cursor: pointer; transition: all .14s; }
+  #capSwitchYes { background: var(--accent); color: #fff; }
+  #capSwitchYes:hover { filter: brightness(1.1); }
+  #capSwitchNo { background: rgba(255,255,255,.16); color: #fff; }
+  #capSwitchNo:hover { background: rgba(255,255,255,.3); }
 
   #guide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: var(--card-2); padding: 40px; z-index: 1000; }
   #guide.show { display: flex; }
@@ -617,9 +632,12 @@
     <div id="reportOverlay">
       <div class="r-title" id="roTitle"></div>
       <div class="r-sub" id="roSub"></div>
+      <div class="r-src" id="roSrc"></div>
       <div class="r-legend" id="roLegend"></div>
+      <div class="r-cmp" id="roCmp"></div>
     </div>
     <div id="reportToast">✕ 보고서 모드 종료 — 클릭 또는 Esc</div>
+    <div id="capSuggest"><span id="capSuggestMsg">미니멀 베이스맵으로 전환할까요?</span><button type="button" id="capSwitchYes">전환</button><button type="button" id="capSwitchNo">취소</button></div>
     <div id="toast"></div>
     <div class="legend">
       <div class="lt">평당가 <span>(만원/3.3㎡)</span></div>
@@ -739,13 +757,16 @@ let cmpLayer = null;
 const CMP = { weight:3, fillOpacity:0.50, radius_m:300 };
 const CMP_MAX = 9;                 // R-M10: 비교단지 상한
 const CMP_DEFAULT_COLOR = "#0071E3";   // 신규 선택 기본색(단일) — 색 지정 UI는 T8
+// cors (스펙 v3 §5 캡처 프리셋): 타일 서버가 Access-Control-Allow-Origin을 보내는가.
+//   true  = cartocdn 3종(voyager·dark·minimal) + arcgisonline(sat) → canvas 캡처 시 타일 오염 없음
+//   false = tile.openstreetmap.org(osm)·opentopomap(terrain) → ACAO 헤더 없음 → 캡처 불가(차단+전환 제안)
 const BASEMAPS = {
-  voyager: { url:"https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20 },
-  osm:     { url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png", attr:"© OpenStreetMap contributors", sub:"abc", maxZoom:19 },
-  dark:    { url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20 },
-  sat:     { url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr:"Tiles © Esri · Maxar · Earthstar Geographics", sub:"", maxZoom:19 },
-  minimal: { url:"https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20 },
-  terrain: { url:"https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", attr:"© OpenStreetMap, SRTM · © OpenTopoMap", sub:"abc", maxZoom:17 },
+  voyager: { url:"https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20, cors:true },
+  osm:     { url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png", attr:"© OpenStreetMap contributors", sub:"abc", maxZoom:19, cors:false },
+  dark:    { url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20, cors:true },
+  sat:     { url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr:"Tiles © Esri · Maxar · Earthstar Geographics", sub:"", maxZoom:19, cors:true },
+  minimal: { url:"https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20, cors:true },
+  terrain: { url:"https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", attr:"© OpenStreetMap, SRTM · © OpenTopoMap", sub:"abc", maxZoom:17, cors:false },
 };
 function setBasemap(key){
   const b = BASEMAPS[key]; if(!b) return;
@@ -1242,7 +1263,10 @@ function initMap(){
   $("fDirect").addEventListener("change", () => { buildJeonseRatio(); buildLeaseMatrix(); render(); });
   $("reportBtn").addEventListener("click", () => setReportMode(true));
   $("reportToast").addEventListener("click", () => setReportMode(false));
-  document.addEventListener("keydown", e => { if(e.key === "Escape") setReportMode(false); });
+  document.addEventListener("keydown", e => { if(e.key === "Escape"){ setReportMode(false); hideCapSwitch(); } });
+  // 비CORS 캡처 차단 시 전환 제안 — 확인: minimal 전환 후 캡처 모드 재진입 (스펙 v3 §5)
+  $("capSwitchYes").addEventListener("click", () => { hideCapSwitch(); setBasemap("minimal"); saveVisual(); setReportMode(true); });
+  $("capSwitchNo").addEventListener("click", hideCapSwitch);
   ["fMin","fMax"].forEach(id => $(id).addEventListener("input", debounce(render, 250)));
   $("fSearch").addEventListener("keydown", e => { if(e.key === "Enter") doSearch(); });
   $("showApt").addEventListener("change", e => e.target.checked ? aptLayer.addTo(map) : map.removeLayer(aptLayer));
@@ -1878,9 +1902,42 @@ function updateRadiusSummary(agg){
   $("rSummary").innerHTML = `<tr><th>반경</th><th class="r">단지</th><th class="r">평균</th><th class="r">최고</th></tr>${rows}`;
 }
 
-// ── 보고서 캡처 모드: 패널 숨기고 타이틀·출처·범례 오버레이 ──
+// ── 보고서 캡처 모드 = 캡처 프리셋 (스펙 v3 §5): 패널 숨기고 타이틀·출처·범례 오버레이 ──
+// ① 비CORS 베이스맵(osm·terrain) 진입 차단 + minimal 전환 제안  ② --icon-scale 1.2 강제(종료 시 복원)
+let capScalePrev = null;      // 진입 직전 --icon-scale 인라인 값(문자열) — 종료 시 정확히 복원
+let _capSuggestTimer = null;
+function suggestCapSwitch(){
+  $("capSuggestMsg").textContent = "현재 베이스맵은 브라우저 캡처를 지원하지 않습니다 — 미니멀로 전환할까요?";
+  $("capSuggest").classList.add("show");
+  clearTimeout(_capSuggestTimer);
+  _capSuggestTimer = setTimeout(hideCapSwitch, 6000);
+}
+function hideCapSwitch(){
+  $("capSuggest").classList.remove("show");
+  clearTimeout(_capSuggestTimer);
+}
 function setReportMode(on){
   if(document.body.classList.contains("report-mode") === on) return;
+  if(on){
+    // ① CORS 가드: 비CORS 타일은 canvas 캡처 시 오염 → 차단 후 전환 제안(확인 시 minimal 전환+진입)
+    const bm = BASEMAPS[baseKey];
+    if(bm && !bm.cors){
+      hideCapSwitch();
+      showToast("캡처는 표준·다크·미니멀·위성에서만");
+      suggestCapSwitch();
+      return;
+    }
+    hideCapSwitch();
+    // ② 아이콘 120% 강제 — 슬라이더(#szIcon) 미변경, CSS 변수만 오버라이드 (진입 전 값 저장)
+    capScalePrev = document.documentElement.style.getPropertyValue("--icon-scale");
+    document.documentElement.style.setProperty("--icon-scale", "1.2");
+  } else {
+    // ② 복원: 저장 값이 있으면 그대로, 없으면 인라인 제거(:root 폴백=1)
+    if(capScalePrev) document.documentElement.style.setProperty("--icon-scale", capScalePrev);
+    else document.documentElement.style.removeProperty("--icon-scale");
+    capScalePrev = null;
+    hideCapSwitch();
+  }
   document.body.classList.toggle("report-mode", on);
   if(on){
     const jeonse = dealMode() === "jeonse";
@@ -1908,6 +1965,13 @@ function setReportMode(on){
         GDC_GRADES.map(g => `<span class="row"><span class="sw" style="background:${GDC_COLOR[g]}"></span>${GDC_EMOJI[g]} ${g}</span>`).join("");
     }
     $("roLegend").innerHTML = legendHtml;
+    // 캡처 오버레이 강화 (스펙 v3 §5·§7): 출처 각주 + 경쟁단지 번호 범례(선택 순서·미선택 시 생략)
+    $("roSrc").textContent = `출처: 국토교통부 실거래가 (기준 ${D.meta.generated_at || ""})`;
+    $("roCmp").style.display = competitors.length ? "" : "none";
+    $("roCmp").innerHTML = competitors.length
+      ? `<span class="r-cmp-t">경쟁단지</span>` + [...competitors].sort((a,b) => a.order - b.order).map(c =>
+          `<span class="row"><span class="rn" style="background:${c.color}">${c.order}</span>${c.name}</span>`).join("")
+      : "";
     const toast = $("reportToast");
     toast.style.display = "block";
     setTimeout(() => toast.style.display = "none", 2600);
@@ -2236,6 +2300,18 @@ boot();
     }
   }));
 })();
+</script>
+<!-- ── 내보내기 모듈 가드 로딩 (T14 제공 예정) ──
+     파일 미존재 시 조용히 실패: 404 = 리소스 실패만 기록되고 전역 미정의 → 이후 코드 크래시 0.
+     순서 보장: vendor 3종(html2canvas·SheetJS·pptxgenjs) 먼저, exporter.js가 전역 소비.
+     build_map.stamp_html()의 src-regex는 데이터 8종만 매칭 → 이 태그들은 stamp 무해. -->
+<script src="vendor/html2canvas.min.js" onerror="void 0"></script>
+<script src="vendor/xlsx.full.min.js" onerror="void 0"></script>
+<script src="vendor/pptxgenjs.cjs.min.js" onerror="void 0"></script>
+<script src="exporter.js" onerror="void 0"></script>
+<script>
+// exporter.js 로드 성공 → window.JIMEOK_EXPORT 정의 시 T9 export 버튼 재평가(활성). 미로드면 disabled 유지.
+if (typeof window.syncCmpExportBtns === "function") window.syncCmpExportBtns();
 </script>
 </body>
 </html>
