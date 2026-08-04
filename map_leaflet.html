@@ -167,6 +167,22 @@
   #hlClear { appearance: none; margin-top: 8px; font: 600 11.5px var(--font-base); color: var(--ink-2); background: var(--card); border: 1px solid var(--hairline); border-radius: var(--r-chip); padding: 6px 12px; cursor: pointer; transition: all .14s; }
   #hlClear:hover { color: var(--sem-risk); border-color: var(--sem-risk); background: var(--canvas); }
 
+  /* ── 🎯 경쟁단지 선택 (스펙 v3 §3.3·§4) — hlLayer·HL과 별도 레이어·스타일(CMP) ── */
+  .cmp-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 8px; transition: background .12s; }
+  .cmp-row:hover { background: var(--card-2); }
+  .cmp-num { width: 20px; height: 20px; border-radius: 50%; color: #fff; font: 700 11px/1 var(--font-num); display: flex; align-items: center; justify-content: center; flex: 0 0 20px; }
+  .cmp-name { flex: 1; font: 600 12.5px var(--font-base); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .cmp-chip { width: 14px; height: 14px; border-radius: 4px; flex: 0 0 14px; border: 1px solid var(--hairline); }
+  .cmp-x { appearance: none; border: none; background: transparent; color: var(--ink-3); font: 700 12px var(--font-base); cursor: pointer; padding: 4px 6px; border-radius: 6px; transition: all .12s; }
+  .cmp-x:hover { color: var(--sem-risk); background: var(--card); }
+  .cmp-empty { font: 500 11.5px var(--font-base); color: var(--ink-4); padding: 4px; }
+  .cmp-search { display: flex; gap: 6px; margin-top: 8px; }
+  #cmpAdd { appearance: none; flex: 0 0 auto; font: 600 11.5px var(--font-base); color: var(--accent); background: var(--accent-soft); border: 1px solid var(--hairline); border-radius: var(--r-chip); padding: 6px 12px; cursor: pointer; white-space: nowrap; transition: all .14s; }
+  #cmpAdd:hover { border-color: var(--accent); background: var(--canvas); }
+  /* 번호 배지 divIcon (스펙 §4: 지름 20px 원 · 배경=단지 색 · 흰 숫자 11px Inter bold · 링 상단) */
+  .cmp-badge { transform: translate(-50%, -50%); width: 20px; height: 20px; border-radius: 50%; color: #fff; font: 700 11px/1 var(--font-num); display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+  #toast { display: none; position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 900; background: rgba(25,31,40,.92); color: #fff; font-size: 12.5px; font-weight: 600; padding: 9px 18px; border-radius: var(--r-chip); box-shadow: 0 4px 16px rgba(20,24,32,.3); pointer-events: none; white-space: nowrap; }
+
   .lh-pin { transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 8px; background: #7c3aed; color: #fff; border: 2.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); font: 800 11px var(--font-base); cursor: pointer; }
 
   .leaflet-tooltip.district-label { background: rgba(31,107,189,.92); color: #fff; border: none; box-shadow: 0 1px 4px rgba(0,0,0,.3); font: 700 11px var(--font-base); padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
@@ -397,6 +413,18 @@
       <button id="hlClear" type="button">강조 전체 해제</button>
     </fieldset>
 
+    <fieldset id="cmpBox">
+      <legend>🎯 경쟁단지</legend>
+      <div class="checks one">
+        <label><input type="checkbox" id="cmpMode"> 경쟁단지 선택 모드 (마커 클릭=선택·재클릭=해제)</label>
+      </div>
+      <div id="cmpList"></div>
+      <div class="cmp-search">
+        <input type="text" id="cmpSearch" placeholder="단지명 일부 입력 후 추가">
+        <button id="cmpAdd" type="button">추가</button>
+      </div>
+    </fieldset>
+
     <fieldset>
       <legend>주변 인프라</legend>
       <div class="checks one">
@@ -487,6 +515,7 @@
       <div class="r-legend" id="roLegend"></div>
     </div>
     <div id="reportToast">✕ 보고서 모드 종료 — 클릭 또는 Esc</div>
+    <div id="toast"></div>
     <div class="legend">
       <div class="lt">평당가 <span>(만원/3.3㎡)</span></div>
       <div id="legendTiers"></div>
@@ -567,6 +596,11 @@ let baseLayer = null, baseKey = "voyager";
 let hlLayer = null;
 let hlIndex = new Map();   // key → {type:"circle", layer} | {type:"poly", poly, orig}
 const HL = { color:"#0071E3", weight:3, fillColor:"#0071E3", fillOpacity:0.30, opacity:0.95 };
+// ── 🎯 경쟁단지 전용 레이어·고정 스타일 (스펙 v3 §4) — HL과 혼용 금지(별도 레이어·별도 스타일) ──
+let cmpLayer = null;
+const CMP = { weight:3, fillOpacity:0.50, radius_m:300 };
+const CMP_MAX = 9;                 // R-M10: 비교단지 상한
+const CMP_DEFAULT_COLOR = "#0071E3";   // 신규 선택 기본색(단일) — 색 지정 UI는 T8
 const BASEMAPS = {
   voyager: { url:"https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20 },
   osm:     { url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png", attr:"© OpenStreetMap contributors", sub:"abc", maxZoom:19 },
@@ -627,6 +661,86 @@ function clearHl(){
   hlIndex.clear();
 }
 
+// ── 🎯 경쟁단지 선택 (스펙 v3 §3.3·§4) — 모드 ON 클릭은 토글만(모드는 모달), hlLayer·showDetail과 독립 ──
+let competitors = [];              // [{i, name, color, order}] — 선택 순서 유지
+function cmpMode(){ return $("cmpMode") && $("cmpMode").checked; }
+function cmpKey(){ return "jimeok.competitors." + ((D.meta && D.meta.lawd) || "root"); }
+function loadCompetitors(){        // 키 없음·깨짐·단지 소멸 = try/catch + 유효성 필터 (loadVisual 패턴)
+  try{
+    const arr = JSON.parse(localStorage.getItem(cmpKey()));
+    if(!Array.isArray(arr)) return [];
+    return arr.filter(c => c && Number.isInteger(Number(c.i)) && D.apts[Number(c.i)])
+      .map(c => ({ i:Number(c.i), name:(typeof c.name === "string" && c.name) || D.apts[Number(c.i)].name, color:(typeof c.color === "string" && /^#/.test(c.color)) ? c.color : CMP_DEFAULT_COLOR, order:Number(c.order) || 0 }));
+  }catch(e){ return []; }
+}
+const saveCompetitors = debounce(() => {   // debounce 200ms — saveVisual 패턴 그대로
+  try{ localStorage.setItem(cmpKey(), JSON.stringify(competitors)); }catch(e){}
+}, 200);
+let _toastTimer = null;
+function showToast(msg){
+  const t = $("toast");
+  t.textContent = msg;
+  t.style.display = "block";
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.style.display = "none"; }, 2600);
+}
+function cmpNextOrder(){ return competitors.length ? Math.max(...competitors.map(c => c.order)) + 1 : 1; }
+function addCompetitor(idx, apt){
+  const i = Number(idx);
+  if(competitors.some(c => c.i === i)){ showToast("이미 선택된 단지입니다"); return false; }
+  if(competitors.length >= CMP_MAX){ showToast("비교단지는 최대 " + CMP_MAX + "개(R-M10)"); return false; }
+  competitors.push({ i, name:apt.name, color:CMP_DEFAULT_COLOR, order:cmpNextOrder() });
+  renderCmp(); saveCompetitors();
+  return true;
+}
+function removeCompetitor(i){
+  const at = competitors.findIndex(c => c.i === Number(i));
+  if(at < 0) return;
+  competitors.splice(at, 1);
+  renderCmp(); saveCompetitors();
+}
+function toggleCompetitor(idx, apt){       // 모드 ON 마커 클릭 — 선택↔해제 토글만
+  const i = Number(idx);
+  if(competitors.some(c => c.i === i)){ removeCompetitor(i); return; }
+  addCompetitor(i, apt);
+}
+function cmpBadgeIcon(color, n){           // 번호 배지 divIcon (스펙 §4)
+  return L.divIcon({ className:"apt-divicon", html:`<div class="cmp-badge" style="background:${color}">${n}</div>`, iconSize:[0,0], iconAnchor:[0,0] });
+}
+function renderCmp(){                      // cmpLayer 재렌더 + 패널 목록 갱신 (boot 복원도 이 함수)
+  if(!cmpLayer) return;
+  cmpLayer.clearLayers();
+  const sorted = [...competitors].sort((a,b) => a.order - b.order);
+  sorted.forEach((c, pos) => {
+    const apt = D.apts[c.i];
+    if(!apt) return;
+    L.circle([apt.lat, apt.lng], { radius:CMP.radius_m, weight:CMP.weight, color:c.color, fillColor:c.color, fillOpacity:CMP.fillOpacity }).addTo(cmpLayer);
+    // 번호 배지 = 링 상단 (placeSite의 radius-tag 위치 공식 재사용)
+    L.marker([apt.lat + CMP.radius_m/111320, apt.lng], { icon:cmpBadgeIcon(c.color, pos + 1), interactive:false }).addTo(cmpLayer);
+  });
+  const list = $("cmpList");
+  if(!list) return;
+  list.innerHTML = sorted.length
+    ? sorted.map((c, pos) =>
+        `<div class="cmp-row">` +
+        `<span class="cmp-num" style="background:${c.color}">${pos + 1}</span>` +
+        `<span class="cmp-name" title="${c.name}">${c.name}</span>` +
+        `<span class="cmp-chip" style="background:${c.color}"></span>` +
+        `<button class="cmp-x" type="button" data-i="${c.i}" title="선택 해제">✕</button>` +
+        `</div>`).join("")
+    : `<div class="cmp-empty">선택된 단지 없음 — 모드 ON 후 마커 클릭 또는 검색 추가</div>`;
+}
+function cmpSearchAdd(){                   // doSearch 스타일 재사용 — 단지명 substring 매칭 후 추가
+  const q = $("cmpSearch").value.trim();
+  if(!q) return;
+  const idx = D.apts.findIndex(a => a.name.includes(q));
+  if(idx < 0){ alert("일치하는 단지가 없습니다: " + q); return; }
+  const apt = D.apts[idx];
+  addCompetitor(idx, apt);
+  map.setView([apt.lat, apt.lng], 16);
+  $("cmpSearch").value = "";
+}
+
 // #szIcon(50~150%) → --icon-scale(0.5~1.5) 전 밴드 승산 (스펙 v3 §1)
 // --icon-size는 32px 기준 비례 병행 — 기존 .infra-fig·.station-mk 소비처 보존
 function applyIconScale(v){
@@ -669,6 +783,9 @@ function initMap(){
   drawLH();
   drawCommute();
   aptLayer = L.layerGroup().addTo(map);
+  cmpLayer = L.layerGroup().addTo(map);   // 경쟁단지 링·번호 배지 전용 (hlLayer·aptLayer와 분리 — render 재실행에도 유지)
+  competitors = loadCompetitors();        // 지역별 localStorage 복원 (키: jimeok.competitors.<lawd>)
+  renderCmp();
   placeSite(D.meta.site);
 
   $("fPeriod").addEventListener("change", render);
@@ -692,6 +809,10 @@ function initMap(){
   $("vSimple").addEventListener("change", e => { document.body.classList.toggle("v-simple", e.target.checked); redrawInfra(); render(); saveVisual(); });
   $("vHl").addEventListener("change", saveVisual);
   $("hlClear").addEventListener("click", clearHl);
+  // 🎯 경쟁단지 — 검색 추가·목록 ✕ 제거(위임: 행은 renderCmp 재생성)
+  $("cmpAdd").addEventListener("click", cmpSearchAdd);
+  $("cmpSearch").addEventListener("keydown", e => { if(e.key === "Enter") cmpSearchAdd(); });
+  $("cmpList").addEventListener("click", e => { const b = e.target.closest(".cmp-x"); if(b) removeCompetitor(Number(b.dataset.i)); });
   // 임대분석: 윈도우 토글 + 비교임대료 입력
   document.querySelectorAll(".lmx-toggle button").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -1149,7 +1270,10 @@ function renderIndividual(){
       iconSize: [0,0], iconAnchor: [0,0],
     });
     const m = L.marker([apt.lat, apt.lng], { icon });
-    m.on("click", () => { showDetail(apt, g, idx); if(hlMode()) toggleAptHl("apt:" + idx, apt); });   // 상세 먼저, 링 나중 (기획 §4)
+    m.on("click", () => {
+      if(cmpMode()){ toggleCompetitor(idx, apt); return; }   // 🎯 경쟁 모드 = 모달: 선택 토글만 (상세 카드 안 엶)
+      showDetail(apt, g, idx); if(hlMode()) toggleAptHl("apt:" + idx, apt);   // 상세 먼저, 링 나중 (기획 §4)
+    });
     m._pp = g.pp; m._dist = dist ? dist[idx] : 0;   // declutter 우선순위용
     m.addTo(aptLayer);
     markers.push(m);
