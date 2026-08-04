@@ -1,0 +1,88 @@
+# 지먹(jimeok) GitHub Pages 배포 워크플로우 (T15)
+#
+# 레포 루트의 정본 파일 + 커밋된 지역 번들로 site/를 조립해 Pages에 배포한다.
+# 빌드(수집·지오코딩) 없음 — 조립만. 지역 번들은 site_query="" 스크럽 완료분.
+#
+# 보안 게이트(3종)를 조립 직후·업로드 직전 2회 실행해 조립 실수를 방어:
+#   ① grep -ri kakao site/  → 매치 시 exit 1 (키 문자열 잔존 차단)
+#   ② test ! -f site/config.json (사업지·반경 설정 로컬 전용)
+#   ③ test ! -f site/.env        (API 키 로컬 전용)
+#
+# ⚠️ push는 부장님 약관 go 게이트 이후에만 — 그 전까지 이 워크플로우는 미가동.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  assemble:
+    environment: github-pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Assemble site/
+        run: |
+          set -euo pipefail
+          mkdir -p site
+
+          # 뷰어(정본) + 허브 + export 모듈 + vendor 라이브러리
+          cp map_leaflet.html index.html exporter.js site/
+          cp -R vendor site/
+
+          # demo/* → 루트 이름으로 복사 (데모가 배포판 루트 모드)
+          # demo/README.md는 배포판 루트에 불필요하므로 제외
+          for f in demo/*; do
+            base="$(basename "$f")"
+            [ "$base" = "README.md" ] && continue
+            cp -f "$f" "site/$base"
+          done
+
+          # 지역 번들 전부 (index.json + regions/<lawd>/map_data.js × 20)
+          cp -R regions site/
+
+          echo "== site/ 조립 완료 =="
+          ls -la site/
+
+      - name: Security gate 1 — 조립 직후
+        run: |
+          set -euo pipefail
+          if grep -ri kakao site/; then
+            echo "::error::site/ 에서 kakao 문자열 검출 — 배포 중단"
+            exit 1
+          fi
+          test ! -f site/config.json
+          test ! -f site/.env
+          echo "보안 게이트 1 통과 (kakao 0 · config.json 없음 · .env 없음)"
+
+      - name: Security gate 2 — 업로드 직전
+        run: |
+          set -euo pipefail
+          if grep -ri kakao site/; then
+            echo "::error::site/ 에서 kakao 문자열 검출 — 배포 중단"
+            exit 1
+          fi
+          test ! -f site/config.json
+          test ! -f site/.env
+          echo "보안 게이트 2 통과 (kakao 0 · config.json 없음 · .env 없음)"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
