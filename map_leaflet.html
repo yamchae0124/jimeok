@@ -528,6 +528,9 @@
 })();
 </script>
 <script>
+// 가드: 무쿼리(루트 모드)인데 MAP_DATA 미로드 = 데이터 번들 없는 배포 환경 → 허브 리다이렉트.
+// (부트스트랩 document.write 스크립트는 이 블록 직전에 실행 완료 — 여기서 로드 여부 확정) throw로 본 스크립트 정지.
+if (!window.__JIMEOK_REGION__ && !window.MAP_DATA) { location.replace("index.html"); throw new Error("MAP_DATA missing → index.html redirect"); }
 const D = window.MAP_DATA;
 const $ = (id) => document.getElementById(id);
 

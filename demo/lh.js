@@ -1,0 +1,1 @@
+window.LH_DATA = {"notices": [], "sido": "서울특별시", "source": "LH 공고문 (k-skill-proxy 경유)", "fetched_at": "2026-08-04 14:07", "error": "HTTPSConnectionPool(host='k-skill-proxy.nomadamas.org', port=443): Read timed out. (read timeout=15)"};

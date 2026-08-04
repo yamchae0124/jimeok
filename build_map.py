@@ -79,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
     # --out이 주어지면 --no-stamp 강제 (라이브 html을 사이드 번들 경로로 덮어쓰지 않음).
     ap = argparse.ArgumentParser(
         description="SQLite → map_data.js export (with optional hub bundling).",
-        epilog="--lawd → --no-site-geocode 강제 | --out → --no-stamp 강제",
+        epilog="--lawd → --no-site-geocode 강제 | --out → --no-stamp 강제 | --nosite → 사업지 핀 완전 제거",
     )
     ap.add_argument("--lawd", help="법정동 시군구 코드 5자리 (생략 시 config.json)")
     ap.add_argument("--out", help="출력 경로 (생략 시 map_data.js)")
@@ -88,12 +88,16 @@ def main(argv: list[str] | None = None) -> int:
         "--no-site-geocode", action="store_true",
         help="사업지 지오코딩 건너뜀 (--lawd 있으면 자동 적용)",
     )
+    ap.add_argument(
+        "--nosite", action="store_true",
+        help="사업지 핀 완전 제거: 지오코딩 skip + site_query 빈 문자열 export (배포·데모용)",
+    )
     args = ap.parse_args(argv)
 
     lawd = args.lawd or _CFG["lawd_cd"]
     out = Path(args.out) if args.out else OUT
     no_stamp = args.no_stamp or bool(args.out)        # --out → stamp 강제 OFF
-    no_site = args.no_site_geocode or bool(args.lawd)  # --lawd → site geocode 강제 OFF
+    no_site = args.no_site_geocode or args.nosite or bool(args.lawd)  # --lawd·--nosite → site geocode 강제 OFF
 
     out.parent.mkdir(parents=True, exist_ok=True)
 
@@ -223,7 +227,8 @@ def main(argv: list[str] | None = None) -> int:
             "trades_on_map": len(trades),
             "rents_on_map": len(rents),
             "center": center,
-            "site_query": SITE_QUERY,
+            # --nosite: 사업지 주소 자체를 번들에서 제거 (배포판 공개 노출 차단 — site_query도 좌표 추적 단서)
+            "site_query": "" if args.nosite else SITE_QUERY,
             "site": site,
             # kakao_js_key·google_maps_key export 제거 (2026-07-21):
             # 정본 map_leaflet.html은 안 읽고 _archive 구판만 쓰던 값 —

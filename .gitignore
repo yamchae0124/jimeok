@@ -2,6 +2,8 @@
 .env
 data/
 map_data.js
+# 데모 번들은 커밋 대상 — --nosite 빌드라 사업지 주소·좌표 0 (T13)
+!demo/map_data.js
 map_data.json
 __pycache__/
 *.pyc
