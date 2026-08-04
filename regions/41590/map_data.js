@@ -1,0 +1,1 @@
+window.MAP_DATA = {"meta": {"region": "41590", "lawd": "41590", "generated_at": "2026-08-05 04:41", "trade_count": 0, "rent_count": 0, "apt_count": 0, "geocoded": 0, "trades_on_map": 0, "rents_on_map": 0, "center": null, "site_query": "", "site": null}, "apts": [], "trades": [], "rents": []};
