@@ -1,0 +1,23 @@
+# 비밀키·생성물·캐시는 git에 올리지 않음 (Z-021 PII/키 방어선)
+.env
+data/
+map_data.js
+map_data.json
+__pycache__/
+*.pyc
+_tmp_cap/
+
+# 공개 레포 hygiene (jimeok 배포 준비 — T2)
+# 사업지 주소·키 포함 로컬 전용 파일은 공개 레포에 올리지 않음
+config.json
+_config.py
+.env.example
+_deploy/
+_archive/
+PAGE/
+_output/
+_*.md
+_*.html
+실거래가 지도 도구.html
+*.log
+.DS_Store

@@ -1,0 +1,12 @@
+{
+  "site_query": "<사업지 주소>",
+  "lawd_cd": "00000",
+  "region_name": "<시군구명>",
+  "months": 24,
+  "radius_infra_m": 3000,
+  "radius_transit_m": 4000,
+  "proxy_base": "https://k-skill-proxy.nomadamas.org",
+  "lh_sido": "",
+  "lh_pan_ss": "공고중",
+  "commute_targets": []
+}
