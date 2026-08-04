@@ -6,6 +6,16 @@ map_data.js
 !regions/*/map_data.js
 # 데모 번들은 커밋 대상 — --nosite 빌드라 사업지 주소·좌표 0 (T13)
 !demo/map_data.js
+# 루트 단일지역 데이터 = 로컬 작업 파일, 사업지 포함 가능 — 공개용은 demo/
+# (/ 앵커 = 루트만 매칭: demo/의 동명 sanitize 사본이 무시되지 않게)
+/infra.js
+/infra_icons.js
+/transit.js
+/district.js
+/admin.js
+/lh.js
+/commute.js
+/gdc_data.js
 map_data.json
 __pycache__/
 *.pyc
