@@ -27,6 +27,7 @@
     --r-sm:8px; --r:12px; --r-card:20px; --r-chip:999px;
     --glass:rgba(255,255,255,.86); --glass-blur:blur(10px);
     --elev-float:0 12px 40px rgba(20,24,32,.18);
+    --icon-scale:1;   /* #szIcon 슬라이더 승산(0.5~1.5) — JS가 런타임 갱신, 여기선 폴백 */
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; font-family: var(--font-base); color: var(--ink); -webkit-font-smoothing: antialiased; }
@@ -111,32 +112,42 @@
 
   #map { flex: 1; position: relative; background: #EEF1F4; }
 
+  /* ── 줌 3단 스케일 (스펙 v3 §1): 밴드 기본값 × #szIcon --icon-scale 승산 ──
+     --pill-h=pill 높이 · --mk-fs=마커 숫자 · --infra-s=인프라 아이콘 · --lbl-fs=라벨(역명 10/단지명 11, §2) */
+  #map { --pill-h:24px; --mk-fs:11px; --infra-s:18px; --lbl-fs:10px; }   /* 밴드 부여 전 폴백(초기 줌 14=mid) */
+  #map.zoom-far  { --pill-h:20px; --mk-fs:10px;   --infra-s:14px; --lbl-fs:10px; }   /* z≤12 */
+  #map.zoom-mid  { --pill-h:24px; --mk-fs:11px;   --infra-s:18px; --lbl-fs:10px; }   /* z13~14 · 역명 라벨 */
+  #map.zoom-near { --pill-h:28px; --mk-fs:12.5px; --infra-s:22px; --lbl-fs:11px; }   /* z≥15 · 단지명 라벨 */
+
   /* ── 지도 마커 (기능 유지 · 토큰 리스킨) ── */
   .apt-divicon, .infra-divicon { background: none; border: none; }
-  .aptmarker { transform: translate(-50%, -50%); display: inline-block; background: #555; color: #fff; font: 700 12.5px var(--font-num); padding: 5px 10px; border-radius: 10px; white-space: nowrap; cursor: pointer; box-shadow: 0 2px 8px rgba(20,24,32,.22), 0 0 0 1px rgba(255,255,255,.6) inset; border: 1.5px solid #fff; text-align: center; transition: transform .16s cubic-bezier(.34,1.3,.64,1), box-shadow .16s; }
+  .aptmarker { transform: translate(-50%, -50%); display: inline-flex; flex-direction: column; align-items: center; justify-content: center; background: #555; color: #fff; font-weight: 700; font-family: var(--font-num); font-size: calc(var(--mk-fs) * var(--icon-scale)); line-height: 1; height: calc(var(--pill-h) * var(--icon-scale)); padding: 0 10px; border-radius: 10px; white-space: nowrap; cursor: pointer; box-shadow: 0 2px 8px rgba(20,24,32,.22), 0 0 0 1px rgba(255,255,255,.6) inset; border: 1.5px solid #fff; text-align: center; transition: transform .16s cubic-bezier(.34,1.3,.64,1), box-shadow .16s; }
   .aptmarker:hover { transform: translate(-50%, -50%) translateY(-3px) scale(1.04); box-shadow: 0 6px 16px rgba(20,24,32,.30); z-index: 10; }
-  .aptmarker .nm { font: 500 9.5px var(--font-base); opacity: .85; display: block; max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+  .aptmarker .nm { font: 500 9.5px var(--font-base); font-size: calc(var(--lbl-fs) * var(--icon-scale)); line-height: 1; opacity: .85; display: block; max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
   .aptmarker.t1 { background: var(--t1); } .aptmarker.t2 { background: var(--t2); }
   .aptmarker.t3 { background: var(--t3); } .aptmarker.t4 { background: var(--t4); }
   .aptmarker.t5 { background: var(--t5); }
   .aptmarker.collapsed { padding: 0; width: 11px; height: 11px; border-radius: 50%; overflow: hidden; text-indent: -999px; border-width: 2px; opacity: .85; }
   .aptmarker.collapsed .nm { display: none; }
-  #map.zoom-far .aptmarker { padding: 0; width: 11px; height: 11px; border-radius: 50%; overflow: hidden; text-indent: -999px; border-width: 2px; }
+  /* zoom-far pill: z≤12는 클러스터 풍선이 실제 렌더 — pill은 밴드 변수(20px)만 적용, 구 11px 점 강제 제거 (스펙 v3 §1) */
   #map.zoom-far .aptmarker .nm { display: none; }
+  #map.zoom-mid .aptmarker .nm { display: none; }            /* spec v3 §1⑤: mid=역명(.st-nm)만 노출 */
+  #map.zoom-near .station-mk .st-nm { display: none; }       /* spec v3 §1⑤: near=단지명(.nm)만 노출 */
   .clustermarker { transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--accent); color: #fff; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 3px 12px rgba(0,113,227,.35); cursor: pointer; line-height: 1.05; transition: transform .16s cubic-bezier(.34,1.3,.64,1); }
   .clustermarker:hover { transform: translate(-50%, -50%) scale(1.08); }
   .clustermarker .cn { font: 800 13px var(--font-num); }
   .clustermarker .cp { font: 600 8.5px var(--font-num); opacity: .9; }
 
-  .infra-pin { transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; color: #fff; border: 2.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); cursor: default; }
-  .infra-pin .material-symbols-rounded { font-size: 17px; }
+  /* infra-pin: --infra-s=글리프 크기(스펙 v3 §1) · 원 지름 = 글리프 + 11px 크롬(테두리 5+여백 6, 기존 28=17+11 유지) */
+  .infra-pin { transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; width: calc(var(--infra-s) * var(--icon-scale) + 11px); height: calc(var(--infra-s) * var(--icon-scale) + 11px); border-radius: 50%; color: #fff; border: 2.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); cursor: default; }
+  .infra-pin .material-symbols-rounded { font-size: calc(var(--infra-s) * var(--icon-scale)); }
   .infra-fig { transform: translate(-50%, -50%); width: var(--icon-size,32px); height: var(--icon-size,32px); line-height: 0; }
   .infra-fig svg { width: var(--icon-size,32px); height: var(--icon-size,32px); display: block; }
   .station-divicon { background: none; border: none; }
   .station-mk { transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; width: max-content; gap: calc(var(--icon-size,32px)*0.07); }
   .station-mk .st-ico { display: flex; align-items: center; justify-content: center; gap: calc(var(--icon-size,32px)*0.05); }
   .station-mk .st-dot { width: calc(var(--icon-size,32px)*0.5); height: calc(var(--icon-size,32px)*0.5); border-radius: 50%; border: calc(var(--icon-size,32px)*0.08) solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); flex: 0 0 auto; }
-  .station-mk .st-nm { font-size: calc(var(--icon-size,32px)*0.36); font-weight: 800; color: var(--ink); line-height: 1; white-space: nowrap; text-align: center; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 3px #fff; }
+  .station-mk .st-nm { font-size: calc(var(--lbl-fs) * var(--icon-scale)); font-weight: 800; color: var(--ink); line-height: 1; white-space: nowrap; text-align: center; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 3px #fff; }
   .leaflet-tooltip.infra-label { background: transparent; border: none; box-shadow: none; padding: 0 3px; margin: 0; font-size: var(--label-size,10px); font-weight: 700; color: var(--ink); white-space: nowrap; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 3px #fff; }
   .leaflet-tooltip.infra-label::before { display: none; }
   #map.zoom-far .station-mk .st-nm { display: none; }
@@ -358,7 +369,7 @@
 
     <fieldset>
       <legend>시각 설정</legend>
-      <label style="font-size:11.5px;color:#555;display:block;margin-bottom:7px">아이콘 <input type="range" id="szIcon" min="20" max="72" value="32" style="width:100%"></label>
+      <label style="font-size:11.5px;color:#555;display:block;margin-bottom:7px">아이콘(%) <input type="range" id="szIcon" min="50" max="150" value="100" style="width:100%"></label>
       <label style="font-size:11.5px;color:#555;display:block">글자 <input type="range" id="szLabel" min="8" max="22" value="10" style="width:100%"></label>
       <div class="v-grid">
         <div>
@@ -616,20 +627,28 @@ function clearHl(){
   hlIndex.clear();
 }
 
+// #szIcon(50~150%) → --icon-scale(0.5~1.5) 전 밴드 승산 (스펙 v3 §1)
+// --icon-size는 32px 기준 비례 병행 — 기존 .infra-fig·.station-mk 소비처 보존
+function applyIconScale(v){
+  const p = Number(v);
+  document.documentElement.style.setProperty("--icon-scale", p / 100);
+  document.documentElement.style.setProperty("--icon-size", (p * 0.32) + "px");
+}
+
 function initMap(){
   const c = D.meta.center;
   map = L.map("map", { zoomControl: true, attributionControl: true }).setView([c.lat, c.lng], 14);
   hlLayer = L.layerGroup().addTo(map);   // 강조 링·폴리곤 스타일 전용 (aptLayer와 분리 — render 재실행에도 유지)
 
-  // 시각 설정 복원 (localStorage) — 키 없음·깨짐·항목 누락 = HTML 기본값(figma/pill/voyager/32/10/강조OFF)
+  // 시각 설정 복원 (localStorage) — 키 없음·깨짐·항목 누락 = HTML 기본값(figma/pill/voyager/100%/10/강조OFF)
   const saved = loadVisual();
   if(saved.vInfra) $("vInfra").value = saved.vInfra;
   if(saved.vMarker) $("vMarker").value = saved.vMarker;
   $("vSimple").checked = !!saved.vSimple;
   $("vHl").checked = !!saved.vHl;
-  if(saved.szIcon != null) $("szIcon").value = saved.szIcon;
+  if(saved.szIcon != null) $("szIcon").value = Number(saved.szIcon) < 50 ? Math.max(50, Math.round(saved.szIcon * 100 / 32)) : saved.szIcon;   // 레거시 px(20~72)→% 마이그레이션 (32px=100%)
   if(saved.szLabel != null) $("szLabel").value = saved.szLabel;
-  document.documentElement.style.setProperty("--icon-size", $("szIcon").value + "px");
+  applyIconScale($("szIcon").value);
   document.documentElement.style.setProperty("--label-size", $("szLabel").value + "px");
   document.body.classList.toggle("v-simple", $("vSimple").checked);
 
@@ -665,7 +684,7 @@ function initMap(){
   ["fMin","fMax"].forEach(id => $(id).addEventListener("input", debounce(render, 250)));
   $("fSearch").addEventListener("keydown", e => { if(e.key === "Enter") doSearch(); });
   $("showApt").addEventListener("change", e => e.target.checked ? aptLayer.addTo(map) : map.removeLayer(aptLayer));
-  $("szIcon").addEventListener("input", e => { document.documentElement.style.setProperty("--icon-size", e.target.value + "px"); refreshTooltips(); saveVisual(); });
+  $("szIcon").addEventListener("input", e => { applyIconScale(e.target.value); refreshTooltips(); saveVisual(); });
   $("szLabel").addEventListener("input", e => { document.documentElement.style.setProperty("--label-size", e.target.value + "px"); refreshTooltips(); saveVisual(); });
   // 시각 설정 전환 — 전부 런타임 반영 (재빌드·재수집 0)
   $("vInfra").addEventListener("change", () => { redrawInfra(); saveVisual(); });
@@ -1264,7 +1283,13 @@ function setReportMode(on){
   setTimeout(() => map.invalidateSize(), 60);   // 패널 토글 후 지도 크기 재계산
 }
 
-function applyZoomClass(){ if(map) $("map").classList.toggle("zoom-far", map.getZoom() < 13); }
+function applyZoomClass(){
+  if(!map) return;
+  const z = map.getZoom(), el = $("map");
+  el.classList.toggle("zoom-far", z < 13);              // z≤12 — 기존 조건 유지
+  el.classList.toggle("zoom-mid", z >= 13 && z < 15);   // z13~14
+  el.classList.toggle("zoom-near", z >= 15);            // z≥15
+}
 
 // 라벨 크기 변경 시 툴팁 위치 재계산 — 안 하면 처음 그린 좌상단 기준으로 오른쪽으로만 자란다
 function refreshTooltips(){
