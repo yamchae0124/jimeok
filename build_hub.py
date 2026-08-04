@@ -4,7 +4,7 @@ build_hub.py — per-region map_data bundles → regions/index.json
 data/realprice_*.db 를 글로빙해 각 5자리 lawd DB마다 build_map.main()을 호출,
 regions/<lawd>/map_data.js 번들을 생성하고 regions/index.json(요약 인덱스)을 쓴다.
 
-100% 로컬 — 외부 API 호출 없음 (build_map에 --lawd를 넘겨 --no-site-geocode 강제).
+100% 로컬 — 외부 API 호출 없음 (build_map에 --lawd·--nosite를 넘겨 지오코딩 차단 + 사업지 주소 제거).
 백업 DB(realprice_*_backup.db)는 건너뛴다.
 """
 from __future__ import annotations
@@ -72,7 +72,7 @@ def main() -> int:
         out_path = regions_dir / lawd / "map_data.js"
 
         try:
-            ret = build_map.main(["--lawd", lawd, "--out", str(out_path)])
+            ret = build_map.main(["--lawd", lawd, "--nosite", "--out", str(out_path)])
         except Exception:
             print(f"❌ FAIL: {lawd} — 예외 발생")
             traceback.print_exc()

@@ -2,7 +2,7 @@
   {
     "lawd": "11110",
     "region": "11110",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 1174,
     "rent_count": 4114,
     "apt_count": 94,
@@ -19,7 +19,7 @@
   {
     "lawd": "11410",
     "region": "11410",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 5296,
     "rent_count": 13003,
     "apt_count": 233,
@@ -36,7 +36,7 @@
   {
     "lawd": "26230",
     "region": "26230",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 7707,
     "rent_count": 16428,
     "apt_count": 403,
@@ -53,7 +53,7 @@
   {
     "lawd": "26260",
     "region": "26260",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 6203,
     "rent_count": 8066,
     "apt_count": 318,
@@ -70,7 +70,7 @@
   {
     "lawd": "28260",
     "region": "28260",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 12341,
     "rent_count": 21576,
     "apt_count": 351,
@@ -87,7 +87,7 @@
   {
     "lawd": "29200",
     "region": "29200",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 0,
     "rent_count": 0,
     "apt_count": 0,
@@ -101,7 +101,7 @@
   {
     "lawd": "36110",
     "region": "36110",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 9752,
     "rent_count": 22135,
     "apt_count": 215,
@@ -118,7 +118,7 @@
   {
     "lawd": "41113",
     "region": "41113",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 8194,
     "rent_count": 16209,
     "apt_count": 193,
@@ -135,7 +135,7 @@
   {
     "lawd": "41196",
     "region": "41196",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 1202,
     "rent_count": 3013,
     "apt_count": 222,
@@ -152,7 +152,7 @@
   {
     "lawd": "41360",
     "region": "41360",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 13923,
     "rent_count": 21574,
     "apt_count": 355,
@@ -167,9 +167,26 @@
     "has_district": false
   },
   {
+    "lawd": "41461",
+    "region": "41461",
+    "generated_at": "2026-08-05 04:25",
+    "trade_count": 4265,
+    "rent_count": 9133,
+    "apt_count": 175,
+    "geocoded": 208,
+    "center": {
+      "lat": 37.244793,
+      "lng": 127.21744
+    },
+    "has_infra": false,
+    "has_transit": false,
+    "has_admin": false,
+    "has_district": false
+  },
+  {
     "lawd": "41590",
     "region": "41590",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 0,
     "rent_count": 0,
     "apt_count": 0,
@@ -183,7 +200,7 @@
   {
     "lawd": "41591",
     "region": "41591",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 2654,
     "rent_count": 15440,
     "apt_count": 85,
@@ -200,7 +217,7 @@
   {
     "lawd": "43113",
     "region": "43113",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 8679,
     "rent_count": 12943,
     "apt_count": 186,
@@ -217,7 +234,7 @@
   {
     "lawd": "43130",
     "region": "43130",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 4807,
     "rent_count": 7669,
     "apt_count": 133,
@@ -234,7 +251,7 @@
   {
     "lawd": "43770",
     "region": "43770",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 1871,
     "rent_count": 2230,
     "apt_count": 84,
@@ -251,7 +268,7 @@
   {
     "lawd": "44133",
     "region": "44133",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 17340,
     "rent_count": 29994,
     "apt_count": 274,
@@ -266,26 +283,9 @@
     "has_district": false
   },
   {
-    "lawd": "41461",
-    "region": "경기도 용인시",
-    "generated_at": "2026-08-01 03:16",
-    "trade_count": 4265,
-    "rent_count": 9133,
-    "apt_count": 175,
-    "geocoded": 208,
-    "center": {
-      "lat": 37.244793,
-      "lng": 127.21744
-    },
-    "has_infra": false,
-    "has_transit": false,
-    "has_admin": false,
-    "has_district": false
-  },
-  {
     "lawd": "11590",
     "region": "서울 동작구",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 6269,
     "rent_count": 16687,
     "apt_count": 207,
@@ -300,9 +300,26 @@
     "has_district": false
   },
   {
+    "lawd": "11380",
+    "region": "서울 은평구",
+    "generated_at": "2026-08-05 04:25",
+    "trade_count": 5325,
+    "rent_count": 16527,
+    "apt_count": 395,
+    "geocoded": 526,
+    "center": {
+      "lat": 37.606871,
+      "lng": 126.918666
+    },
+    "has_infra": false,
+    "has_transit": false,
+    "has_admin": false,
+    "has_district": false
+  },
+  {
     "lawd": "31140",
     "region": "울산 남구",
-    "generated_at": "2026-08-01 03:16",
+    "generated_at": "2026-08-05 04:25",
     "trade_count": 9029,
     "rent_count": 7468,
     "apt_count": 418,
