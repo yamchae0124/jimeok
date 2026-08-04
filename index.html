@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>지먹 — 실거래가 지도</title>
+<meta name="description" content="지먹 — 국토부 실거래 원천 실거래가 지도. 지역을 골라 사업지 반경 시장을 한 화면에 읽습니다.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230071E3'/%3E%3Ctext x='16' y='22.5' font-size='15' font-weight='800' text-anchor='middle' fill='white' font-family='sans-serif'%3E지%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"/>
+<style>
+  /* ════════════════════════════════════════════════════════════
+     지먹 — 랜딩+허브 통합 (map_leaflet.html 디자인 시스템 동일 토큰)
+     토큰: OS 시스템(Toss gray) + 블루 액센트 · Pretendard/Inter tnum/JetBrains Mono
+     매체: 스크린 — dark/glass 히어로 한정, 모션은 상태 신호만
+     ════════════════════════════════════════════════════════════ */
+  :root{
+    --canvas:#FFFFFF; --card:#F2F4F6; --card-2:#F9FAFB; --hairline:#E5E8EB;
+    --ink:#191F28; --ink-2:#4E5968; --ink-3:#8B95A1; --ink-4:#B0B8C1;
+    --accent:#0071E3; --accent-soft:color-mix(in srgb,var(--accent) 10%,#fff);
+    --sem-sale:#F59E0B; --sem-jeonse:var(--accent); --sem-month:#16a34a; --sem-risk:#DC2626;
+    --font-base:"Pretendard",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    --font-num:"Inter","Pretendard",monospace;
+    --font-mono:"JetBrains Mono",ui-monospace,monospace;
+    --r-sm:8px; --r:12px; --r-card:20px; --r-chip:999px;
+    /* 지도 뷰어와 공유하는 확장 토큰 */
+    --accent-strong:color-mix(in srgb,var(--accent) 86%,#000);
+    --glass:rgba(255,255,255,.86); --glass-blur:blur(10px);
+    --elev-float:0 12px 40px rgba(20,24,32,.18);
+    --elev-card:0 10px 28px rgba(20,24,32,.10), 0 2px 8px rgba(20,24,32,.06);
+    /* 히어로(다크) 전용 */
+    --hero-bg:#14181F; --hero-ink:#F4F6F8; --hero-ink-2:rgba(244,246,248,.66);
+    --hero-line:rgba(255,255,255,.14); --hero-dot:rgba(255,255,255,.07);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; font-family: var(--font-base); color: var(--ink); -webkit-font-smoothing: antialiased; }
+  body { display: flex; flex-direction: column; min-height: 100vh; background: var(--canvas); }
+  main { flex: 1; }
+  ::selection { background: var(--accent-soft); color: var(--accent-strong); }
+  .num, .count, .lawd, .collected, .latest, .nocoord, .fidx { font-variant-numeric: tabular-nums; }
+
+  /* ── 상단 탭바 (지도 #tabbar 문법) ── */
+  #tabbar { position: sticky; top: 0; z-index: 600; display: flex; align-items: center; gap: 14px; background: var(--canvas); border-bottom: 1px solid var(--hairline); padding: 11px 22px; flex-wrap: wrap; }
+  #tabbar .logo { font-weight: 800; font-size: 19px; letter-spacing: -.04em; color: var(--ink); flex: 0 0 auto; }
+  #tabbar .vdiv { width: 1px; height: 15px; background: var(--hairline); flex: 0 0 1px; }
+  #tabbar .tag { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; letter-spacing: -.01em; color: var(--ink-2); white-space: nowrap; }
+  #tabbar .tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--sem-month); flex: 0 0 6px; animation: livepulse 2.4s ease-in-out infinite; }
+  @keyframes livepulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  #tabbar .count { margin-left: auto; padding: 5px 11px; border-radius: var(--r-chip); background: var(--card); font: 500 11.5px var(--font-mono); color: var(--ink-2); white-space: nowrap; }
+  #tabbar .count.tick { animation: tick .3s ease; }
+  @keyframes tick { 0% { transform: scale(1); } 40% { transform: scale(1.07); } 100% { transform: scale(1); } }
+
+  /* ── 공통 섹션 래퍼 · 오버라인 · h2 ── */
+  .sec { max-width: 1240px; margin: 0 auto; padding: 64px 22px 0; }
+  .sec-head { margin-bottom: 24px; }
+  .overline { font-size: 10.5px; font-weight: 700; letter-spacing: .14em; color: var(--accent); display: flex; align-items: center; gap: 7px; }
+  .overline::before { content: ""; width: 16px; height: 2px; background: var(--accent); }
+  .sec h2 { margin: 12px 0 0; font-size: clamp(22px, 2.6vw, 28px); font-weight: 800; letter-spacing: -.025em; color: var(--ink); }
+  .sec .sub { margin: 8px 0 0; font-size: 13.5px; line-height: 1.7; color: var(--ink-3); }
+
+  /* ══ ① 히어로 — 다크, 스크린 임팩트 한정 구역 ══ */
+  #hero { background: var(--hero-bg); color: var(--hero-ink); position: relative; overflow: hidden; }
+  #hero::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(var(--hero-dot) 1px, transparent 1.3px); background-size: 22px 22px; pointer-events: none; }
+  #hero .wrap { position: relative; max-width: 1240px; margin: 0 auto; padding: 72px 22px 64px; text-align: center; }
+  #hero .ovl { justify-content: center; color: var(--accent); }
+  #hero .ovl::before { background: var(--accent); }
+  #hero h1 { margin: 20px 0 0; font-size: clamp(34px, 5.4vw, 56px); font-weight: 800; letter-spacing: -.035em; line-height: 1.12; color: var(--hero-ink); }
+  #hero .sub { margin: 16px auto 0; max-width: 640px; font-size: clamp(13.5px, 1.6vw, 15.5px); line-height: 1.75; color: var(--hero-ink-2); word-break: keep-all; }
+  #hero .cta { margin-top: 32px; display: inline-flex; align-items: center; gap: 8px; appearance: none; border: none; background: var(--accent); color: #fff; font: 700 14.5px var(--font-base); letter-spacing: -.01em; padding: 14px 28px; border-radius: var(--r); cursor: pointer; transition: background .16s, transform .16s; }
+  #hero .cta:hover { background: var(--accent-strong); transform: translateY(-1px); }
+  #hero .cta:active { transform: none; }
+  #hero .cta:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+  /* 지도 미리보기 = 빈 프레임 (가짜 스크린샷 금지 — 실캡처 삽입 자리) */
+  #hero .shot { margin: 48px auto 0; max-width: 960px; aspect-ratio: 16 / 8; border: 1px solid var(--hero-line); border-radius: var(--r-card); background: rgba(255,255,255,.04); display: flex; align-items: center; justify-content: center; }
+  #hero .shot span { font: 500 12px var(--font-mono); color: rgba(244,246,248,.4); letter-spacing: .02em; }
+
+  /* ══ ② 6열 스탯 배지 (App Store 패턴 — regions/index.json 실시간 집계) ══ */
+  #stats { padding-top: 48px; }
+  .band { display: flex; gap: 1px; background: var(--hairline); border: 1px solid var(--hairline); border-radius: var(--r-card); overflow: hidden; }
+  .band .box { flex: 1; background: var(--canvas); padding: 20px 22px; display: flex; flex-direction: column; gap: 8px; min-width: 0; transition: background .16s; }
+  .band .box:hover { background: var(--card-2); }
+  .band .num { font: 800 clamp(24px, 3vw, 34px)/1 var(--font-num); letter-spacing: -.03em; color: var(--ink); }
+  .band .box.hl .num { color: var(--accent); }
+  .band .lbl { font: 600 11px var(--font-base); color: var(--ink-3); display: flex; align-items: baseline; gap: 6px; }
+  .band .lbl .unit { font: 500 10px var(--font-mono); color: var(--ink-4); }
+
+  /* ══ ③ 기능 그리드 7카드 ══ */
+  .fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 14px; }
+  .fcard { display: flex; flex-direction: column; gap: 8px; background: var(--canvas); border: 1px solid var(--hairline); border-radius: var(--r-card); padding: 20px; transition: border-color .16s, background .16s; }
+  .fcard:hover { background: var(--card-2); }
+  .fcard .fidx { font: 500 10.5px var(--font-mono); color: var(--ink-4); }
+  .fcard .fname { font-size: 15.5px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); }
+  .fcard .fsub { font-size: 12px; line-height: 1.65; color: var(--ink-3); word-break: keep-all; }
+  .fcard.hl { border-color: color-mix(in srgb, var(--accent) 38%, var(--hairline)); background: var(--accent-soft); }
+  .fcard.hl .fname { color: var(--accent-strong); }
+  .fcard.hl .fidx { color: var(--accent); }
+
+  /* ══ ④ 임대 매트릭스 쇼케이스 ══ */
+  .mx-label { display: inline-flex; align-items: center; gap: 7px; margin-top: 16px; padding: 6px 12px; border-radius: var(--r-chip); background: var(--card); border: 1px solid var(--hairline); font: 600 11.5px var(--font-base); color: var(--ink-2); }
+  .mx-label::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--sem-sale); }
+  .twrap { margin-top: 16px; border: 1px solid var(--hairline); border-radius: var(--r-card); overflow-x: auto; }
+  table.mx { width: 100%; border-collapse: collapse; min-width: 560px; }
+  table.mx th { background: var(--card-2); font: 600 11px var(--font-base); letter-spacing: .04em; color: var(--ink-3); text-align: left; padding: 12px 20px; border-bottom: 1px solid var(--hairline); white-space: nowrap; }
+  table.mx td { padding: 14px 20px; border-top: 1px solid var(--hairline); font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+  table.mx tr:first-child td { border-top: none; }
+  table.mx td.dim { color: var(--ink); font-weight: 600; }
+  table.mx td.n { font: 700 15px var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  table.mx td.n.rent { color: var(--sem-month); }
+  table.mx td.n.jeonse { color: var(--accent); }
+  table.mx td.n.yield { color: var(--sem-month); }
+
+  /* ══ ⑤ 정직성 스트립 ══ */
+  .hgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .hcard { display: flex; align-items: flex-start; gap: 12px; background: var(--card-2); border: 1px solid var(--hairline); border-radius: var(--r-card); padding: 20px; }
+  .hcard svg { flex: 0 0 18px; width: 18px; height: 18px; margin-top: 1px; color: var(--sem-month); }
+  .hcard p { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.6; color: var(--ink-2); word-break: keep-all; }
+
+  /* ══ ⑥ 지역 허브 (기존 허브 이식 — 데이터 요약 밴드) ══ */
+  #summary { max-width: 1240px; margin: 26px auto 0; padding: 0 22px; }
+  .ovl-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .latest { margin-left: auto; font: 500 11px var(--font-mono); color: var(--ink-3); }
+
+  /* ── 컨트롤 행: 검색 + 정렬 세그먼트 (지도 #basemapCtl 문법) ── */
+  #controls { max-width: 1240px; margin: 20px auto 0; padding: 0 22px; }
+  .ctl-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .search { position: relative; flex: 1 1 260px; max-width: 430px; }
+  .search > svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--ink-4); pointer-events: none; }
+  .search input { width: 100%; font: 600 13px var(--font-base); padding: 11px 38px; border: 1px solid var(--hairline); border-radius: var(--r); background: var(--canvas); color: var(--ink); outline: none; transition: border-color .16s, box-shadow .16s; }
+  .search input::placeholder { color: var(--ink-4); font-weight: 500; }
+  .search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .search .clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; border: none; border-radius: 50%; background: var(--card); color: var(--ink-3); cursor: pointer; display: none; align-items: center; justify-content: center; padding: 0; transition: background .14s, color .14s; }
+  .search.has .clear { display: flex; }
+  .search .clear:hover { background: var(--hairline); color: var(--ink-2); }
+  .seg { display: flex; gap: 2px; padding: 3px; background: var(--card); border: 1px solid var(--hairline); border-radius: 11px; margin-left: auto; }
+  .seg button { appearance: none; border: none; background: transparent; font: 600 12.5px var(--font-base); color: var(--ink-3); padding: 8px 14px; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: all .15s; letter-spacing: -.01em; }
+  .seg button:hover { color: var(--ink); }
+  .seg button.active { background: var(--canvas); color: var(--accent); font-weight: 700; box-shadow: 0 1px 4px rgba(20,24,32,.14); }
+  .hint { margin-top: 10px; font: 500 11px var(--font-base); color: var(--ink-4); }
+  .hint kbd { font: 600 10px var(--font-mono); background: var(--card); border: 1px solid var(--hairline); border-bottom-width: 2px; border-radius: 5px; padding: 1px 5px; color: var(--ink-2); }
+
+  /* ── 카드 그리드 + 앰비언트 도트 그리드 ── */
+  #gridzone { max-width: 1240px; margin: 18px auto 44px; padding: 0 22px; position: relative; }
+  #gridzone::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(color-mix(in srgb, var(--ink-4) 30%, transparent) 1px, transparent 1.3px); background-size: 22px 22px; opacity: .38; pointer-events: none; -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 90px); mask-image: linear-gradient(180deg, transparent 0, #000 90px); }
+  .grid { position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(262px, 1fr)); gap: 14px; }
+
+  .card { display: flex; flex-direction: column; gap: 12px; background: var(--canvas); border: 1px solid var(--hairline); border-radius: var(--r-card); padding: 18px; text-decoration: none; color: inherit; cursor: pointer; transition: transform .18s cubic-bezier(.34,1.2,.64,1), box-shadow .18s, border-color .18s; animation: card-in .34s cubic-bezier(.32,.72,0,1) both; animation-delay: var(--d, 0ms); }
+  @keyframes card-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  a.card:hover { transform: translateY(-3px); box-shadow: var(--elev-card); border-color: color-mix(in srgb, var(--accent) 34%, var(--hairline)); }
+  a.card:active { transform: translateY(-1px); }
+  a.card:focus-visible, .card.empty:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .card.empty { opacity: .55; cursor: default; }
+  .card.empty:hover { transform: none; box-shadow: none; border-color: var(--hairline); }
+
+  .card .top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .card .rg { flex: 1 1 auto; min-width: 0; font-size: 16.5px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card.unresolved .rg { color: var(--ink-3); }
+  .card .unres { flex: 0 0 auto; padding: 2.5px 8px; border-radius: var(--r-chip); border: 1px solid var(--hairline); font: 600 10px var(--font-base); color: var(--ink-4); white-space: nowrap; }
+  .card .lawd { flex: 0 0 auto; margin-left: auto; padding: 3px 8px; border-radius: var(--r-chip); background: var(--card); font: 500 10.5px var(--font-mono); color: var(--ink-3); }
+  .card .collected { font: 500 10.5px var(--font-mono); color: var(--ink-3); margin-top: -6px; }
+
+  /* 카드 스탯 3분할 (gap:1px + hairline 배경 트릭) */
+  .cstat { display: flex; gap: 1px; background: var(--hairline); border: 1px solid var(--hairline); border-radius: var(--r); overflow: hidden; }
+  .cstat .box { flex: 1; background: var(--canvas); padding: 11px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: background .16s; }
+  a.card:hover .cstat .box { background: var(--card-2); }
+  .cstat .num { font: 700 20px/1 var(--font-num); letter-spacing: -.02em; color: var(--ink); }
+  .cstat .box.hl .num { color: var(--accent); }
+  .cstat .lbl { font: 500 10px var(--font-base); color: var(--ink-3); }
+
+  .card .foot { display: flex; align-items: center; gap: 8px; margin-top: auto; }
+  .pill { padding: 4px 10px; border-radius: var(--r-chip); font: 700 10.5px var(--font-base); letter-spacing: .02em; white-space: nowrap; }
+  .pill.full { background: var(--accent-soft); color: var(--accent-strong); }
+  .pill.base { border: 1px solid var(--hairline); background: var(--canvas); color: var(--ink-3); }
+  .pill.none { border: 1px solid var(--hairline); background: transparent; color: var(--ink-4); font-weight: 600; }
+  .card .nocoord { font: 500 10px var(--font-mono); color: var(--ink-4); white-space: nowrap; }
+  .card .open { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font: 700 11px var(--font-base); color: var(--accent); opacity: 0; transform: translateX(-4px); transition: opacity .16s, transform .16s; white-space: nowrap; }
+  a.card:hover .open, a.card:focus-visible .open { opacity: 1; transform: none; }
+
+  /* ── 상태 (로딩 / 없음 / 오류) ── */
+  .state { display: none; position: relative; padding: 70px 20px; text-align: center; }
+  .state.show { display: block; }
+  .state .big { font-size: 14.5px; font-weight: 700; color: var(--ink-2); margin-bottom: 6px; }
+  .state .small { font-size: 12px; color: var(--ink-3); line-height: 1.75; }
+  .dots { margin-bottom: 14px; }
+  .dots span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-4); margin: 0 3px; animation: blink 1s infinite; }
+  .dots span:nth-child(2) { animation-delay: .15s; }
+  .dots span:nth-child(3) { animation-delay: .3s; }
+  @keyframes blink { 0%,100% { opacity: .25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
+  .errbox { max-width: 560px; margin: 0 auto; background: var(--card-2); border: 1px solid var(--hairline); border-radius: 16px; padding: 26px 28px; text-align: left; }
+  .errbox h3 { margin: 0 0 9px; font-size: 15px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
+  .errbox p { margin: 0 0 14px; font-size: 12.5px; line-height: 1.75; color: var(--ink-2); }
+  .errbox code { background: var(--card); border: 1px solid var(--hairline); border-radius: 5px; padding: 1px 5px; font: 500 11px var(--font-mono); color: var(--ink-2); }
+  .errbox .cmd { display: flex; flex-direction: column; gap: 6px; background: var(--ink); color: #DFE3E8; padding: 13px 15px; border-radius: 10px; font: 500 11.5px var(--font-mono); margin-bottom: 16px; }
+  .errbox .cmd span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .retry { appearance: none; border: none; background: var(--accent); color: #fff; font: 700 12.5px var(--font-base); padding: 10px 18px; border-radius: 10px; cursor: pointer; transition: background .16s; }
+  .retry:hover { background: var(--accent-strong); }
+  .seg button:focus-visible, .search .clear:focus-visible, .retry:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ── 토스트 (지도 #reportToast 문법) ── */
+  #toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 12px); z-index: 900; background: rgba(25,31,40,.92); color: #fff; font: 600 12.5px var(--font-base); padding: 10px 18px; border-radius: var(--r-chip); box-shadow: 0 4px 16px rgba(20,24,32,.3); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ══ ⑦ 푸터 — attribution 단일 요소(약관 결정 시 1곳만 교체) ══ */
+  footer { border-top: 1px solid var(--hairline); background: var(--card-2); padding: 16px 22px; font: 500 10.5px/1.6 var(--font-base); color: var(--ink-4); display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  footer b { color: var(--ink-3); font-weight: 700; }
+  footer .fdot { width: 2px; height: 2px; border-radius: 50%; background: var(--ink-4); flex: 0 0 2px; }
+  footer #attribution { display: inline; margin: 0; font: inherit; color: inherit; }
+
+  /* ── 모바일 ── */
+  @media (max-width: 640px) {
+    #tabbar { padding: 10px 16px; gap: 10px; }
+    #hero .wrap { padding: 48px 16px; }
+    .sec { padding-left: 16px; padding-right: 16px; }
+    #summary, #controls, #gridzone { padding-left: 16px; padding-right: 16px; }
+    .band { flex-wrap: wrap; }
+    .band .box { flex: 1 1 30%; padding: 16px 18px; }
+    .search { max-width: none; }
+    .seg { margin-left: 0; flex: 1 1 100%; }
+    .seg button { flex: 1; }
+    .latest { flex-basis: 100%; margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header id="tabbar">
+  <span class="logo">지먹</span>
+  <span class="vdiv"></span>
+  <span class="tag">실거래가 지도 · 지역 허브</span>
+  <span class="count" id="count">…</span>
+</header>
+
+<main>
+
+  <!-- ══ ① 히어로 ══ -->
+  <section id="hero" aria-label="소개">
+    <div class="wrap">
+      <span class="overline ovl">국토부 실거래 원천</span>
+      <h1>지먹 — 실거래가 지도</h1>
+      <p class="sub">국토부 실거래 원천 · 호가 없음 · 사업지 반경 시장을 한 화면에</p>
+      <button type="button" class="cta" id="ctaOpen">지도 열기
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+      </button>
+      <div class="shot" role="img" aria-label="지도 스크린샷 삽입 예정 자리"><span>지도 스크린샷 자리</span></div>
+    </div>
+  </section>
+
+  <!-- ══ ② 6열 스탯 배지 — regions/index.json 실시간 집계 ══ -->
+  <section id="stats" class="sec" aria-label="전체 집계">
+    <div class="band">
+      <div class="box"><div class="num" id="statRegion">0</div><div class="lbl">수집 지역 <span class="unit">곳</span></div></div>
+      <div class="box hl"><div class="num" id="statTrade">0</div><div class="lbl">매매 실거래 <span class="unit">건</span></div></div>
+      <div class="box"><div class="num" id="statRent">0</div><div class="lbl">전월세 <span class="unit">건</span></div></div>
+      <div class="box"><div class="num" id="statApt">0</div><div class="lbl">아파트 단지 <span class="unit">개</span></div></div>
+      <div class="box"><div class="num" id="statLayer">0</div><div class="lbl">레이어 <span class="unit">종</span></div></div>
+      <div class="box"><div class="num" id="statSource">RTMS</div><div class="lbl">데이터 출처 <span class="unit">국토부</span></div></div>
+    </div>
+  </section>
+
+  <!-- ══ ③ 기능 그리드 — 레이어 7종 ══ -->
+  <section id="features" class="sec" aria-label="기능">
+    <div class="sec-head">
+      <span class="overline">기능</span>
+      <h2>레이어 7종</h2>
+      <p class="sub">사업지 반경 시장을 겹쳐 읽습니다. 지도에서 켜고 끕니다.</p>
+    </div>
+    <div class="fgrid">
+      <article class="fcard"><span class="fidx">01</span><span class="fname">실거래 단지</span><span class="fsub">매매◉/전세◯ 토글 · 평당가 티어</span></article>
+      <article class="fcard"><span class="fidx">02</span><span class="fname">전세가율</span><span class="fsub">단지×평형</span></article>
+      <article class="fcard hl"><span class="fidx">03</span><span class="fname">임대분석 매트릭스</span><span class="fsub">평형×연차</span></article>
+      <article class="fcard"><span class="fidx">04</span><span class="fname">개발지구 경계</span></article>
+      <article class="fcard"><span class="fidx">05</span><span class="fname">행정구역 3단</span></article>
+      <article class="fcard"><span class="fidx">06</span><span class="fname">인프라</span><span class="fsub">학교·백화점·관공서</span></article>
+      <article class="fcard"><span class="fidx">07</span><span class="fname">교통</span><span class="fsub">철도·역·고속도로</span></article>
+    </div>
+  </section>
+
+  <!-- ══ ④ 임대분석 매트릭스 쇼케이스 ══ -->
+  <section id="matrix" class="sec" aria-label="임대분석 매트릭스">
+    <div class="sec-head">
+      <span class="overline">임대분석</span>
+      <h2>임대분석 매트릭스 (평형×연차)</h2>
+      <span class="mx-label">예시: 부산 동래구 · 최근 12개월</span>
+    </div>
+    <div class="twrap">
+      <table class="mx">
+        <thead>
+          <tr><th>평형</th><th>연차</th><th>평균월세</th><th>전세가율</th><th>월세수익률</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="dim">25평형(59㎡)</td><td>신축</td><td class="n rent">110만</td><td class="n jeonse">54%</td><td class="n yield">2.2%</td></tr>
+          <tr><td class="dim">25평형(59㎡)</td><td>준신축</td><td class="n rent">85만</td><td class="n jeonse">64%</td><td class="n yield">2.2%</td></tr>
+          <tr><td class="dim">34평형(84㎡)</td><td>신축</td><td class="n rent">150만</td><td class="n jeonse">53%</td><td class="n yield">2.3%</td></tr>
+          <tr><td class="dim">34평형(84㎡)</td><td>준신축</td><td class="n rent">128만</td><td class="n jeonse">66%</td><td class="n yield">2.8%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══ ⑤ 정직성 스트립 ══ -->
+  <section id="honesty" class="sec" aria-label="데이터 원칙">
+    <div class="hgrid">
+      <div class="hcard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
+        <p>국토부 실거래만 씁니다. 호가는 쓰지 않습니다.</p>
+      </div>
+      <div class="hcard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
+        <p>표본 3건 미만은 표시하지 않습니다.</p>
+      </div>
+      <div class="hcard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
+        <p>수집 기준일을 항상 표기합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ ⑥ 지역 허브 (기존 허브 로직 이식) ══ -->
+  <section id="regions" class="sec" aria-label="지역 허브">
+    <div class="sec-head">
+      <span class="overline">지역 허브</span>
+      <h2>지역을 고르면 지도가 열립니다</h2>
+    </div>
+  </section>
+
+  <section id="summary" aria-label="데이터 요약">
+    <div class="ovl-row">
+      <span class="overline">실거래 데이터 현황</span>
+      <span class="latest" id="latest"></span>
+    </div>
+    <div class="band">
+      <div class="box"><div class="num" id="sumRegion">0</div><div class="lbl">수집 지역 <span class="unit">곳</span></div></div>
+      <div class="box hl"><div class="num" id="sumTrade">0</div><div class="lbl">매매 건수 <span class="unit">건</span></div></div>
+      <div class="box"><div class="num" id="sumRent">0</div><div class="lbl">전월세 건수 <span class="unit">건</span></div></div>
+      <div class="box"><div class="num" id="sumApt">0</div><div class="lbl">아파트 단지 <span class="unit">개</span></div></div>
+    </div>
+  </section>
+
+  <section id="controls" aria-label="검색 및 정렬">
+    <div class="ctl-row">
+      <div class="search" id="searchBox">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/></svg>
+        <input type="text" id="q" placeholder="지역명 또는 법정동 코드 검색" autocomplete="off" aria-label="지역 검색">
+        <button type="button" class="clear" id="qClear" aria-label="검색어 지우기">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="seg" id="sortSeg" role="group" aria-label="정렬 기준">
+        <button type="button" data-sort="trade" class="active">매매건수</button>
+        <button type="button" data-sort="apt">단지수</button>
+        <button type="button" data-sort="recent">최근수집</button>
+      </div>
+    </div>
+    <div class="hint"><kbd>/</kbd> 검색 · 카드 클릭 → 지역 지도 뷰어로 이동</div>
+  </section>
+
+  <section id="gridzone">
+    <div class="grid" id="grid"></div>
+    <div class="state" id="state" role="status" aria-live="polite"></div>
+  </section>
+</main>
+
+<!-- ══ ⑦ 푸터 — attribution 단일 요소 ══ -->
+<footer>
+  <b>지먹</b><span class="fdot"></span>실거래가 지도<span class="fdot"></span>
+  <p id="attribution">데이터: 국토교통부 실거래가 공공데이터(data.go.kr) · 지도: © OpenStreetMap contributors · © CARTO · Esri/Vantor · Earthstar Geographics · © OpenTopoMap(CC-BY-SA)</p>
+</footer>
+
+<div id="toast" role="status"></div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+  const grid = $("#grid"), state = $("#state"), chip = $("#count"),
+        q = $("#q"), clearBtn = $("#qClear"), searchBox = $("#searchBox");
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let DATA = [], sortKey = "trade", lastChip = "";
+
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const fmt = (n) => (n || 0).toLocaleString("ko-KR");
+  const isEmpty = (d) => !(d.apt_count > 0) || !(d.trade_count > 0);
+  const isUnresolved = (d) => String(d.region) === String(d.lawd);
+
+  const CMP = {
+    trade:  (a, b) => (b.trade_count || 0) - (a.trade_count || 0),
+    apt:    (a, b) => (b.apt_count   || 0) - (a.apt_count   || 0),
+    recent: (a, b) => String(b.generated_at || "").localeCompare(String(a.generated_at || ""))
+  };
+
+  function visible() {
+    const term = q.value.trim().toLowerCase();
+    const list = term
+      ? DATA.filter((d) => String(d.region).toLowerCase().includes(term) || String(d.lawd).toLowerCase().includes(term))
+      : DATA.slice();
+    list.sort((a, b) => CMP[sortKey](a, b) || String(a.lawd).localeCompare(String(b.lawd)));
+    return { list, term };
+  }
+
+  const ARROW = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+
+  function cardHTML(d, delay) {
+    const empty = isEmpty(d);
+    const unres = isUnresolved(d);
+    const full  = d.has_infra || d.has_transit || d.has_admin || d.has_district;
+    const pill  = empty ? '<span class="pill none">데이터 준비중</span>'
+                : full  ? '<span class="pill full">풀 레이어</span>'
+                        : '<span class="pill base">실거래 중심</span>';
+    const nocoord = d.center ? "" : '<span class="nocoord">중심좌표 없음</span>';
+    const open = empty ? "" : ('<span class="open">지도 열기 ' + ARROW + "</span>");
+    const inner =
+      '<div class="top">' +
+        '<span class="rg">' + esc(d.region) + "</span>" +
+        (unres ? '<span class="unres">코드만</span>' : "") +
+        '<span class="lawd">' + esc(d.lawd) + "</span>" +
+      "</div>" +
+      '<div class="collected">수집 ' + esc(d.generated_at || "—") + "</div>" +
+      '<div class="cstat">' +
+        '<div class="box"><span class="num">' + fmt(d.apt_count)   + '</span><span class="lbl">단지</span></div>' +
+        '<div class="box hl"><span class="num">' + fmt(d.trade_count) + '</span><span class="lbl">매매</span></div>' +
+        '<div class="box"><span class="num">' + fmt(d.rent_count)  + '</span><span class="lbl">전월세</span></div>' +
+      "</div>" +
+      '<div class="foot">' + pill + nocoord + open + "</div>";
+    const style = ' style="--d:' + delay + 'ms"';
+    if (empty) {
+      return '<div class="card empty' + (unres ? " unresolved" : "") + '" data-lawd="' + esc(d.lawd) + '"' + style + ' role="button" tabindex="0" aria-disabled="true">' + inner + "</div>";
+    }
+    return '<a class="card' + (unres ? " unresolved" : "") + '" href="map_leaflet.html?region=' + encodeURIComponent(d.lawd) + '"' + style + ">" + inner + "</a>";
+  }
+
+  function render(stagger) {
+    const { list, term } = visible();
+    const chipTxt = term ? list.length + "/" + DATA.length + "개 지역" : DATA.length + "개 지역";
+    if (chipTxt !== lastChip) {
+      lastChip = chipTxt;
+      chip.textContent = chipTxt;
+      chip.classList.remove("tick"); void chip.offsetWidth; chip.classList.add("tick");
+    }
+    if (!list.length) { grid.innerHTML = ""; showEmpty(term); return; }
+    hideState();
+    grid.innerHTML = list.map((d, i) => cardHTML(d, stagger ? Math.min(i * 22, 380) : 0)).join("");
+  }
+
+  function countUp(el, target) {
+    if (reduceMotion) { el.textContent = fmt(target); return; }
+    const dur = 850, t0 = performance.now();
+    const step = (now) => {
+      const p = Math.min((now - t0) / dur, 1);
+      el.textContent = fmt(Math.round(target * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  /* ② 6열 스탯 배지 — regions/index.json 실시간 집계 (하드코딩 0) */
+  function renderHeroStats() {
+    const sum = (k) => DATA.reduce((s, d) => s + (d[k] || 0), 0);
+    countUp($("#statRegion"), DATA.length);
+    countUp($("#statTrade"), sum("trade_count"));
+    countUp($("#statRent"), sum("rent_count"));
+    countUp($("#statApt"), sum("apt_count"));
+    countUp($("#statLayer"), 7);
+  }
+
+  function renderSummary() {
+    const sum = (k) => DATA.reduce((s, d) => s + (d[k] || 0), 0);
+    countUp($("#sumRegion"), DATA.length);
+    countUp($("#sumTrade"), sum("trade_count"));
+    countUp($("#sumRent"), sum("rent_count"));
+    countUp($("#sumApt"), sum("apt_count"));
+    const latest = DATA.map((d) => String(d.generated_at || "")).sort().pop();
+    if (latest) $("#latest").textContent = "최근 수집 " + latest;
+  }
+
+  function hideState() { state.className = "state"; state.innerHTML = ""; }
+  function showLoading() {
+    state.className = "state show";
+    state.innerHTML = '<div class="dots"><span></span><span></span><span></span></div>' +
+      '<div class="big">지역 목록 불러오는 중…</div>' +
+        '<div class="small">regions/index.json 파이프라인 데이터를 읽는 중입니다</div>';
+  }
+  function showEmpty(term) {
+    state.className = "state show";
+    state.innerHTML = '<div class="big">일치하는 지역 없음</div>' +
+      '<div class="small">「' + esc(term) + '」 조건에 맞는 지역이 없습니다.<br>법정동 코드(예: 11590)로도 검색됩니다.</div>';
+  }
+  function showError(err) {
+    const isFile = location.protocol === "file:";
+    state.className = "state show";
+    state.innerHTML =
+      '<div class="errbox">' +
+        "<h3>지역 목록을 불러오지 못했습니다</h3>" +
+        "<p><code>regions/index.json</code> 요청이 실패했습니다 (" + esc((err && err.message) || "network error") + ").<br>" +
+        (isFile ? "현재 <b>file://</b> 프로토콜로 직접 열어 브라우저가 fetch를 차단했을 가능성이 큽니다. " : "") +
+        "아래처럼 같은 폴더에서 로컬 서버를 띄워 접속해 주세요.</p>" +
+        '<div class="cmd"><span>$ python3 -m http.server 8000</span><span>$ open http://localhost:8000</span></div>' +
+        '<button type="button" class="retry" id="retryBtn">다시 시도</button>' +
+      "</div>";
+    $("#retryBtn").addEventListener("click", load);
+  }
+
+  async function load() {
+    showLoading();
+    grid.innerHTML = "";
+    lastChip = "";
+    try {
+      const res = await fetch('regions/index.json', { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const json = await res.json();
+      const arr = Array.isArray(json) ? json
+        : (json && Array.isArray(json.regions)) ? json.regions
+        : (json && typeof json === "object") ? Object.values(json)
+        : [];
+      DATA = arr.filter((d) => d && d.lawd != null);
+      if (!DATA.length) throw new Error("데이터 0건");
+      renderHeroStats();
+      renderSummary();
+      render(true);
+    } catch (err) {
+      showError(err);
+    }
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+  }
+
+  /* ── 이벤트 ── */
+  q.addEventListener("input", () => { searchBox.classList.toggle("has", !!q.value); render(false); });
+  q.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && q.value) { q.value = ""; searchBox.classList.remove("has"); render(false); }
+  });
+  clearBtn.addEventListener("click", () => { q.value = ""; searchBox.classList.remove("has"); render(false); q.focus(); });
+
+  document.querySelectorAll("#sortSeg button").forEach((b) => {
+    b.addEventListener("click", () => {
+      if (sortKey === b.dataset.sort) return;
+      sortKey = b.dataset.sort;
+      document.querySelectorAll("#sortSeg button").forEach((x) => x.classList.toggle("active", x === b));
+      render(false);
+    });
+  });
+
+  const EMPTY_MSG = "수집 데이터 없음 — 데이터 수집 후 열 수 있습니다";
+  grid.addEventListener("click", (e) => { if (e.target.closest(".card.empty")) toast(EMPTY_MSG); });
+  grid.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && e.target.closest(".card.empty")) { e.preventDefault(); toast(EMPTY_MSG); }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const el = document.activeElement;
+    if (e.key === "/" && el !== q && !/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) { e.preventDefault(); q.focus(); }
+  });
+
+  /* 히어로 CTA — 지역 허브로 앵커 스크롤 */
+  $("#ctaOpen").addEventListener("click", () => {
+    $("#regions").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>
