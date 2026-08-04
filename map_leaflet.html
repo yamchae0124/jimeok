@@ -267,6 +267,53 @@
   #detail th { color: var(--ink-3); font-weight: 600; font-size: 10.5px; }
   #detail td.r { text-align: right; font-family: var(--font-num); font-weight: 600; }
 
+  /* ── 🎯 경쟁단지 통계 카드 (스펙 v3 §6 · T9) — #detail과 동일 슬롯(우측 상단 플로팅), 상호 배타 ── */
+  #cmpCard { display: none; position: absolute; top: 14px; right: 14px; z-index: 849; width: 368px; max-height: calc(100% - 28px); overflow-y: auto; background: var(--canvas); border: 1px solid var(--hairline); border-radius: 18px; box-shadow: var(--elev-float); padding: 18px; scrollbar-width: thin; animation: detail-in .24s cubic-bezier(.32,.72,0,1) both; }
+  #cmpCard.show { display: block; }
+  #cmpCard .cc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  #cmpCard h3 { font-size: 16px; font-weight: 700; letter-spacing: -.02em; margin: 0; }
+  #cmpCardX { appearance: none; border: none; background: transparent; color: var(--ink-3); font: 700 13px var(--font-base); cursor: pointer; padding: 4px 8px; border-radius: 8px; transition: all .12s; }
+  #cmpCardX:hover { color: var(--sem-risk); background: var(--card); }
+  #cmpCard .cc-sub { font: 500 11.5px var(--font-base); color: var(--ink-3); margin: 4px 0 9px; line-height: 1.5; }
+  #cmpCard .cc-ctl { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  #cmpCard .cc-ctl select { width: auto; flex: 0 0 auto; padding: 7px 10px; font-size: 12px; }
+  #cmpCard .cc-direct { font: 600 12px var(--font-base); color: var(--ink-2); display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
+  #cmpCard .cc-direct input { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; cursor: pointer; }
+  #cmpCard .cc-win { font: 500 10.5px var(--font-num); color: var(--ink-4); margin-bottom: 4px; }
+  #cmpCard .cc-win:empty { display: none; }
+  .cc-apt { border-top: 1px solid var(--hairline); padding: 10px 0 8px; }
+  .cc-apt-head { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+  .cc-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 10px; }
+  .cc-apt-head b { font-size: 13px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .cc-cnt { margin-left: auto; font: 600 11px var(--font-num); color: var(--ink-3); white-space: nowrap; }
+  .cc-line { font: 500 11.5px/1.65 var(--font-base); color: var(--ink-2); }
+  .cc-line b { font-family: var(--font-num); font-weight: 700; color: var(--ink); }
+  .cc-line .unit, .cc-myrow .unit { color: var(--ink-4); font-size: 10px; }
+  .cc-types { margin-top: 5px; border-top: 1px dashed var(--hairline); }
+  .cc-type { display: flex; align-items: center; gap: 8px; font: 500 11px var(--font-num); color: var(--ink-2); padding: 3px 0; }
+  .cc-type .t-lbl { flex: 0 0 auto; font: 600 11px var(--font-base); color: var(--ink-2); }
+  .cc-type .t-val { flex: 1; text-align: right; }
+  .cc-type .t-n { flex: 0 0 auto; color: var(--ink-3); }
+  .cc-src { font: 500 9.5px/1.5 var(--font-base); color: var(--ink-4); margin-top: 6px; }
+  #cmpMyBox { border-top: 1px solid var(--hairline); padding-top: 10px; margin-top: 4px; }
+  .cc-my-lbl { display: block; font: 600 11px var(--font-base); color: var(--ink-3); margin-bottom: 5px; }
+  #cmpMyPP { width: 160px; font-size: 12px; padding: 7px 10px; }
+  #cmpMyRows:empty { display: none; }
+  .cc-myrow { display: flex; align-items: center; gap: 7px; font: 500 11.5px var(--font-base); color: var(--ink-2); padding: 3px 0; }
+  .cc-myrow b { font-family: var(--font-num); color: var(--ink); }
+  .cc-myrow .cc-nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .cc-myrow .cc-comp { font: 600 11px var(--font-num); color: var(--ink-3); }
+  .cc-myrow .cc-diff { flex: 0 0 auto; font: 700 11.5px var(--font-num); }
+  .cc-diff.pos { color: var(--sem-risk); }
+  .cc-diff.neg { color: var(--t1); }
+  .cc-myself { color: var(--ink); font-weight: 600; }
+  .cc-export { display: flex; flex-wrap: wrap; gap: 5px; border-top: 1px solid var(--hairline); padding-top: 10px; margin-top: 10px; }
+  .cc-export button { appearance: none; font: 600 11px var(--font-base); color: var(--ink-2); background: var(--card); border: 1px solid var(--hairline); border-radius: var(--r-chip); padding: 5px 11px; cursor: pointer; transition: all .14s; }
+  .cc-export button:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); background: var(--canvas); }
+  .cc-export button:disabled { opacity: .45; cursor: not-allowed; }
+  #cmpStatsOpen { float: right; appearance: none; font: 600 10.5px var(--font-base); color: var(--accent); background: var(--accent-soft); border: 1px solid var(--hairline); border-radius: var(--r-chip); padding: 2px 9px; cursor: pointer; transition: all .14s; letter-spacing: 0; }
+  #cmpStatsOpen:hover { border-color: var(--accent); background: var(--canvas); }
+
   /* 반경 평당가 요약 */
   .rsum { width: 100%; border-collapse: collapse; font-size: 12px; }
   .rsum th, .rsum td { padding: 7px 2px; border-bottom: 1px solid var(--card); text-align: left; font-weight: 500; }
@@ -314,6 +361,7 @@
   body.report-mode #panel { display: none; }
   body.report-mode #reportBtn { display: none; }
   body.report-mode #detail { display: none !important; }
+  body.report-mode #cmpCard { display: none !important; }
   body.report-mode .legend { display: none; }
   body.report-mode #basemapCtl { display: none; }
   #reportOverlay { display: none; position: absolute; top: 14px; left: 14px; z-index: 900; background: rgba(255,255,255,.96); border: 1px solid var(--hairline); border-radius: 14px; padding: 14px 18px; max-width: 380px; }
@@ -342,6 +390,7 @@
     #tabbar .region { max-width: 140px; }
     #tabbar .tabs { margin-left: 0; }
     #detail { left: 10px; right: 10px; width: auto; top: auto; bottom: 10px; max-height: 55vh; }
+    #cmpCard { left: 10px; right: 10px; width: auto; top: auto; bottom: 10px; max-height: 55vh; }
     .legend { right: 10px; bottom: auto; top: 64px; width: auto; max-width: 180px; }
     #reportBtn { top: 10px; right: 10px; padding: 8px 12px; }
     #basemapCtl { left: 52px; top: 8px; }
@@ -450,7 +499,7 @@
     </fieldset>
 
     <fieldset id="cmpBox">
-      <legend>🎯 경쟁단지</legend>
+      <legend>🎯 경쟁단지 <button id="cmpStatsOpen" type="button" title="경쟁단지 통계 패널 열기·닫기">📊 통계</button></legend>
       <div class="checks one">
         <label><input type="checkbox" id="cmpMode"> 경쟁단지 선택 모드 (마커 클릭=선택·재클릭=해제)</label>
       </div>
@@ -586,6 +635,39 @@
       <div class="row txt" style="margin-top:4px;color:var(--ink-4)" id="legendNote">숫자 = 전용 평당가(만원)</div>
     </div>
     <div id="detail"></div>
+    <!-- 🎯 경쟁단지 통계 카드 (T9 · 스펙 v3 §6) — #detail과 동일 슬롯(우측 상단), 상호 배타 -->
+    <div id="cmpCard">
+      <div class="cc-head">
+        <h3>경쟁단지 통계</h3>
+        <button id="cmpCardX" type="button" title="닫기">✕</button>
+      </div>
+      <div class="cc-sub" id="cmpCardSub"></div>
+      <div class="cc-ctl">
+        <select id="cmpPeriod" aria-label="통계 기간">
+          <option value="3">최근 3개월</option>
+          <option value="6">최근 6개월</option>
+          <option value="12" selected>최근 12개월</option>
+          <option value="24">최근 24개월</option>
+        </select>
+        <label class="cc-direct"><input type="checkbox" id="cmpNoDirect" checked> 직거래 제외</label>
+      </div>
+      <div class="cc-win" id="cmpWindowLine"></div>
+      <div id="cmpStatsBody"></div>
+      <div id="cmpMyBox">
+        <label class="cc-my-lbl" for="cmpMyPP">당 사업 평당가 (만원/평) — 입력 시 경쟁단지 대비 차이 표시</label>
+        <input type="number" id="cmpMyPP" min="0" step="10" placeholder="예 4000">
+        <div id="cmpMyRows"></div>
+      </div>
+      <div class="cc-export" id="cmpExportBar">
+        <button type="button" data-x="png">PNG</button>
+        <button type="button" data-x="board">보드</button>
+        <button type="button" data-x="excel">Excel</button>
+        <button type="button" data-x="csv">CSV</button>
+        <button type="button" data-x="table">표</button>
+        <button type="button" data-x="pptx">PPT</button>
+        <button type="button" data-x="save">선택 저장</button>
+      </div>
+    </div>
     <div id="commutePanel" style="display:none"></div>
   </div>
 </div>
@@ -747,6 +829,7 @@ function addCompetitor(idx, apt){
   if(competitors.length >= CMP_MAX){ showToast("비교단지는 최대 " + CMP_MAX + "개(R-M10)"); return false; }
   competitors.push({ i, name:apt.name, color:CMP_DEFAULT_COLOR, order:cmpNextOrder() });
   renderCmp(); saveCompetitors();
+  openCmpCard();                       // 🎯 T9: 선택 ≥1 = 통계 패널 자동 열림 (#detail은 openCmpCard가 닫음)
   return true;
 }
 function removeCompetitor(i){
@@ -787,6 +870,7 @@ function renderCmp(){                      // cmpLayer 재렌더 + 패널 목록
         `</div>`).join("")
     : `<div class="cmp-empty">선택된 단지 없음 — 모드 ON 후 마커 클릭 또는 검색 추가</div>`;
   renderCmpCandidates();               // 후보 목록 "선택됨" 상태 동기화 (추천 전엔 no-op)
+  syncCmpCard();                       // 🎯 T9: 열려 있는 통계 카드 동기화 (선택 추가·해제·색 변경 단일 경로)
 }
 function cmpSearchAdd(){                   // doSearch 스타일 재사용 — 단지명 substring 매칭 후 추가
   const q = $("cmpSearch").value.trim();
@@ -933,6 +1017,175 @@ function runCmpAuto(){                 // 자동 추천 실행 — 목록 표시
     : "";
 }
 
+// ── 🎯 경쟁단지 통계 (스펙 v3 §6 구현 정본 · T9) — 순수 함수 · 사이드이펙트 0 ──
+// 산식 정본 = _디자인기획_지도디테일_v3.md §6 (T11 export_deliverables.py compute_stats와 동일 기준).
+// 해석 박제(T11 공통): 최고점·역대 최고 = 타입 스코프(§6.5 예시②) · 표본 <3건 타입은 "기타" 버킷
+// 합산 후 버킷 단위 재계산(§6.2) · half-up 반올림은 표시 단계만(§6.1 표시 관례) — 계산은 원본 정밀도.
+// window = period_start < d ≤ max_date(시작일 비포함) · 직거래 제외 옵션은 역대 집계에도 동일 적용(§6.6).
+function computeCompetitorStats(trades, apts, selection, options){
+  const periodMonths = [3,6,12,24].includes(Number(options && options.periodMonths)) ? Number(options.periodMonths) : 12;
+  const excludeDirect = !(options && options.excludeDirect === false);        // 기본 ON (§6.6)
+  const valid = [];                                                           // 유효 거래만 — 면적·평수·금액·날짜 누락 행 제외(T11 valid_trade 동일)
+  for(const t of trades || []) if(t && t.d && t.amt != null && t.ar != null && t.py) valid.push(t);
+  if(!valid.length) return null;
+  let maxDate = "";                                                           // §6.1 max_date = 데이터 전체 최대 거래일 (호가·오늘 아님 — §6.4)
+  for(const t of valid) if(t.d > maxDate) maxDate = t.d;
+  const periodStart = minusMonths(maxDate, periodMonths);                     // T7 재사용 — 캘린더 개월 차감·월말 클램프
+  const kept = t => !(excludeDirect && t.dr === 1);                           // §6.6 직거래(dr=1) 제외
+  const inWin = t => t.d > periodStart && t.d <= maxDate;                     // §6.1 window
+  const peakOf = rs => {                                                      // §6.5 max(amt) — 동액 시 첫 거래 보존(max() 시맨틱)
+    let p = null;
+    for(const t of rs) if(!p || t.amt > p.amt) p = t;
+    return p ? { amt:p.amt, date:p.d, ar:p.ar, floor:p.fl } : null;
+  };
+  const medianOf = vals => {                                                  // §6.3 중위 — 짝수 표본 = 중앙 2개 평균
+    const s = [...vals].sort((a,b) => a - b);
+    const n = s.length, m = n >> 1;
+    return n % 2 ? s[m] : (s[m-1] + s[m]) / 2;
+  };
+  const rowStats = rs => {                                                    // §6.3 평당가 = amt/py — 평균·중위·건수
+    const vals = rs.map(t => t.amt / t.py);
+    return { avg: vals.reduce((x,y) => x + y, 0) / vals.length, median: medianOf(vals), count: vals.length };
+  };
+  const typeLabel = k => `${k}㎡ (≈${Math.floor(k * 0.3025 + 0.5)}평)`;       // §6.2 라벨 — N = round(키×0.3025)
+  const out = [];
+  const sel = [...(selection || [])].sort((a,b) => (a.order || 0) - (b.order || 0));
+  for(const c of sel){
+    const mine = valid.filter(t => t.a === c.i);                              // 단지 매칭 = trades.a 인덱스 기준 (T6/T11 동일)
+    const mineAll = mine.filter(kept);                                        // 역대 (기간 무관 · §6.5)
+    const mineWin = mineAll.filter(inWin);                                    // window (§6.1)
+    const groups = new Map();                                                 // §6.2 타입 그룹 키 = floor(ar)
+    for(const t of mineWin){ const k = Math.floor(t.ar); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(t); }
+    const etcKeys = new Set();
+    groups.forEach((v,k) => { if(v.length < 3) etcKeys.add(k); });            // 표본 <3건 = "기타" 버킷
+    const rows = [];
+    [...groups.keys()].filter(k => !etcKeys.has(k)).sort((a,b) => a - b).forEach(k => {
+      const rs = groups.get(k);
+      rows.push({ type:typeLabel(k), typeKey:k, ...rowStats(rs), peak:peakOf(rs),
+        alltime:peakOf(mineAll.filter(t => Math.floor(t.ar) === k)) });       // 역대 = 같은 타입 전체 기간 (§6.5)
+    });
+    if(etcKeys.size){
+      const etcWin = mineWin.filter(t => etcKeys.has(Math.floor(t.ar)));
+      if(etcWin.length) rows.push({ type:"기타", typeKey:null, ...rowStats(etcWin), peak:peakOf(etcWin),
+        alltime:peakOf(mineAll.filter(t => etcKeys.has(Math.floor(t.ar)))) }); // 기타 역대 = 버킷 타입 전체 기간
+    }
+    if(!rows.length) rows.push({ type:"—", typeKey:null, avg:null, median:null, count:0, peak:null, alltime:null });
+    const winVals = mineWin.map(t => t.amt / t.py);                           // 단지 전체 window 평당가 (타입 합산)
+    out.push({ i:c.i, name:c.name || ((apts || [])[c.i] || {}).name || "", color:c.color, order:c.order,
+      rows, winTotal:mineWin.length, allTotal:mineAll.length,
+      winAvg: winVals.length ? winVals.reduce((x,y) => x + y, 0) / winVals.length : null,
+      winMedian: winVals.length ? medianOf(winVals) : null,
+      winPeak: peakOf(mineWin),                                               // 단지 기간 최고점 = 타입 스코프 peak의 최대(타입이 window 분할)
+      allPeak: peakOf(mineAll) });                                            // 단지 역대 최고 = 전체 기간 max (§6.5)
+  }
+  return { maxDate, baseYear:Number(maxDate.slice(0,4)), periodStart, periodMonths, excludeDirect, apts:out };
+}
+
+// ── 🎯 통계 패널 (#cmpCard) 렌더 — #detail과 동일 슬롯·상호 배타 · 재계산 단일 경로(computeCompetitorStats) ──
+let cmpCardOpen = false;
+let cmpLastStats = null;               // 마지막 집계 결과 — export 훅(T14) 컨텍스트·당 사업 행 재사용
+function cmpOptions(){ return { periodMonths:Number($("cmpPeriod").value), excludeDirect:$("cmpNoDirect").checked }; }
+function cmpFmt1(x){                   // half-up 소수 1자리 + 천분위 (스펙 §6.1 표시 관례 · T11 fmt1 동일)
+  if(x == null || !isFinite(x)) return "—";
+  const v = (Math.floor(x * 10 + 0.5) / 10).toFixed(1).split(".");
+  return v[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "." + v[1];
+}
+function cmpFmtPct(x){                 // §6.8 차이 % — 부호 표시·소수 1자리 (|x| 기준 half-up)
+  if(x == null || !isFinite(x)) return "—";
+  const v = (Math.floor(Math.abs(x) * 10 + 0.5) / 10).toFixed(1);
+  return (x < 0 ? "-" : "+") + v + "%";
+}
+function closeDetailCard(){            // #detail 비우기 — gdcHide의 detail 정리와 동일 (gdcOpen은 같은 블록 lexical)
+  gdcOpen = null;
+  $("detail").className = "";
+  $("detail").innerHTML = "";
+}
+function openCmpCard(){
+  closeDetailCard();                   // 상호 배타 — cmpCard 열리면 detail 닫힘 (역도 동일 · showDetail 경로 참조)
+  cmpCardOpen = true;
+  $("cmpCard").classList.add("show");
+  renderCmpStats();
+  syncCmpExportBtns();
+}
+function closeCmpCard(){
+  cmpCardOpen = false;
+  $("cmpCard").classList.remove("show");
+}
+function syncCmpCard(){ if(cmpCardOpen) renderCmpStats(); }   // renderCmp() 마지막 호출 — 선택·색 변경 동기화
+
+function renderCmpStats(){
+  const body = $("cmpStatsBody");
+  const sorted = [...competitors].sort((a,b) => a.order - b.order);
+  $("cmpCardSub").textContent = `${sorted.length}개 선택 · ${D.meta.region || ""} · 기준일 ${D.meta.generated_at || ""}`;
+  if(!sorted.length){
+    cmpLastStats = null;
+    $("cmpWindowLine").textContent = "";
+    body.innerHTML = `<div class="cmp-empty">선택된 경쟁단지가 없습니다.<br>선택 모드 ON 후 마커 클릭, 또는 검색·자동 추천으로 추가하세요.</div>`;
+    $("cmpMyBox").style.display = "none";
+    return;
+  }
+  const stats = computeCompetitorStats(D.trades, D.apts, sorted, cmpOptions());
+  cmpLastStats = stats;
+  if(!stats){
+    $("cmpWindowLine").textContent = "";
+    body.innerHTML = `<div class="cmp-empty">거래 데이터가 없습니다.</div>`;
+    $("cmpMyBox").style.display = "none";
+    return;
+  }
+  $("cmpWindowLine").textContent =
+    `${stats.periodStart} ~ ${stats.maxDate} (${stats.periodMonths}개월 · 시작일 비포함) · 직거래 ${stats.excludeDirect ? "제외" : "포함"}`;
+  const src = `출처: 국토교통부 실거래가 (기준 ${D.meta.generated_at || ""})`;   // 스펙 출처 표기 정본 문구
+  body.innerHTML = stats.apts.map(a => {
+    const head = `<div class="cc-apt-head"><span class="cc-dot" style="background:${a.color}"></span>` +
+      `<b title="${a.name}">${a.name}</b><span class="cc-cnt">거래 ${a.winTotal}건</span></div>`;
+    const avgLine = `<div class="cc-line">기간 평당가 평균 <b>${cmpFmt1(a.winAvg)}</b> · 중위 <b>${cmpFmt1(a.winMedian)}</b> <span class="unit">만원/평</span></div>`;
+    const pk = a.winPeak, at = a.allPeak;
+    const pkLine = `<div class="cc-line">기간 최고점 <b>${pk ? fmtAmt(pk.amt) : "—"}</b>${pk ? ` · ${pk.date} · ${pk.ar}㎡ · ${pk.floor}층` : ""}</div>`;
+    const atLine = `<div class="cc-line">역대 최고 <b>${at ? fmtAmt(at.amt) : "—"}</b>${at ? ` · ${at.date} · ${at.ar}㎡ · ${at.floor}층` : ""}</div>`;
+    const types = a.rows.map(r =>
+      `<div class="cc-type"><span class="t-lbl">${r.type}</span>` +
+      `<span class="t-val">${r.avg == null ? "표본 없음" : `${cmpFmt1(r.avg)} · ${cmpFmt1(r.median)}`}</span>` +
+      `<span class="t-n">${r.count}건</span></div>`).join("");
+    return `<div class="cc-apt">${head}${avgLine}${pkLine}${atLine}<div class="cc-types">${types}</div></div>`;
+  }).join("") + `<div class="cc-src">${src}</div>`;
+  $("cmpMyBox").style.display = "";
+  renderCmpMy();
+}
+function renderCmpMy(){                // §6.8 당 사업 행 — 차이 % = (당 − 경쟁) / 경쟁 × 100 (경쟁 = 단지 window 평당가 평균)
+  const box = $("cmpMyRows");
+  const v = Number($("cmpMyPP").value);
+  if(!(cmpLastStats && cmpLastStats.apts && v > 0 && isFinite(v))){ box.innerHTML = ""; return; }
+  let html = `<div class="cc-myrow cc-myself">당 사업(예상) <b>${Math.round(v).toLocaleString()}</b> <span class="unit">만원/평</span></div>`;
+  for(const a of cmpLastStats.apts){
+    const comp = a.winAvg;
+    const diff = comp ? (v - comp) / comp * 100 : null;
+    html += `<div class="cc-myrow"><span class="cc-dot" style="background:${a.color}"></span>` +
+      `<span class="cc-nm" title="${a.name}">${a.name}</span>` +
+      `<span class="cc-comp">${cmpFmt1(comp)}</span>` +
+      `<b class="cc-diff${diff == null ? "" : (diff < 0 ? " neg" : " pos")}">${cmpFmtPct(diff)}</b></div>`;
+  }
+  box.innerHTML = html + `<div class="cc-src">출처: 국토교통부 실거래가 (기준 ${D.meta.generated_at || ""})</div>`;
+}
+
+// export 버튼 — window.JIMEOK_EXPORT 가드 (T14 exporter.js가 제공 · 현시점 미로드 = disabled가 정상)
+// 계약: window.JIMEOK_EXPORT(kind, ctx) 단일 함수 · kind = png|board|excel|csv|table|pptx|save
+//       ctx = { lawd, selection, stats(cmpLastStats), options, generatedAt }
+function syncCmpExportBtns(){
+  const ok = typeof window.JIMEOK_EXPORT === "function";
+  document.querySelectorAll("#cmpExportBar button[data-x]").forEach(b => {
+    b.disabled = !ok;
+    b.title = ok ? "" : "내보내기 모듈 미로드";
+  });
+}
+function cmpExportCtx(){
+  return { lawd:(D.meta && D.meta.lawd) || "", selection:competitors.map(c => ({ ...c })),
+           stats:cmpLastStats, options:cmpOptions(), generatedAt:(D.meta && D.meta.generated_at) || "" };
+}
+function cmpExportClick(kind){
+  if(typeof window.JIMEOK_EXPORT !== "function"){ showToast("내보내기 모듈 미로드"); return; }
+  window.JIMEOK_EXPORT(kind, cmpExportCtx());
+}
+
 // #szIcon(50~150%) → --icon-scale(0.5~1.5) 전 밴드 승산 (스펙 v3 §1)
 // --icon-size는 32px 기준 비례 병행 — 기존 .infra-fig·.station-mk 소비처 보존
 function applyIconScale(v){
@@ -1057,6 +1310,17 @@ function initMap(){
       }
     });
   }
+  // 🎯 경쟁단지 통계 패널 (스펙 v3 §6 · T9) — 옵션 변경 = 즉시 재집계 · #detail과 상호 배타
+  $("cmpStatsOpen").addEventListener("click", () => cmpCardOpen ? closeCmpCard() : openCmpCard());
+  $("cmpCardX").addEventListener("click", closeCmpCard);
+  $("cmpPeriod").addEventListener("change", () => { if(cmpCardOpen) renderCmpStats(); });
+  $("cmpNoDirect").addEventListener("change", () => { if(cmpCardOpen) renderCmpStats(); });
+  $("cmpMyPP").addEventListener("input", debounce(renderCmpMy, 200));
+  $("cmpExportBar").addEventListener("click", e => {
+    const b = e.target.closest("button[data-x]");
+    if(b && !b.disabled) cmpExportClick(b.dataset.x);
+  });
+  syncCmpExportBtns();
   // 임대분석: 윈도우 토글 + 비교임대료 입력
   document.querySelectorAll(".lmx-toggle button").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -1666,6 +1930,7 @@ function refreshTooltips(){
 }
 
 function showDetail(apt, g, idx){
+  closeCmpCard();                      // 🎯 T9: #detail↔#cmpCard 동일 슬롯 상호 배타
   // 월세 중위 라인 — 단지 대표(최다) 평형버킷 기준. 표본 2건 미만이면 생략
   const wolseLine = (domB) => {
     const ws = WOLSE_STAT.get(idx + "|" + domB);
@@ -1828,6 +2093,7 @@ function gdcRenderMarkers(){
 function gdcNum(v, suf){ return (v === null || v === undefined) ? '<span class="na">❌</span>' : (v + (suf||"")); }
 
 function gdcShowDetail(j, bIdx){
+  closeCmpCard();                      // 🎯 T9: #detail 슬롯 상호 배타 (gdc 판정 상세도 #detail 사용)
   gdcOpen = j;
   gdcOpenBucket = (bIdx >= 0 && bIdx < (j.buckets||[]).length) ? bIdx : 0;
   const scn = gdcScenario();
