@@ -172,7 +172,8 @@
   .cmp-row:hover { background: var(--card-2); }
   .cmp-num { width: 20px; height: 20px; border-radius: 50%; color: #fff; font: 700 11px/1 var(--font-num); display: flex; align-items: center; justify-content: center; flex: 0 0 20px; }
   .cmp-name { flex: 1; font: 600 12.5px var(--font-base); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-  .cmp-chip { width: 14px; height: 14px; border-radius: 4px; flex: 0 0 14px; border: 1px solid var(--hairline); }
+  .cmp-chip { width: 14px; height: 14px; border-radius: 4px; flex: 0 0 14px; border: 1px solid var(--hairline); cursor: pointer; transition: transform .12s; }
+  .cmp-chip:hover { transform: scale(1.25); }
   .cmp-x { appearance: none; border: none; background: transparent; color: var(--ink-3); font: 700 12px var(--font-base); cursor: pointer; padding: 4px 6px; border-radius: 6px; transition: all .12s; }
   .cmp-x:hover { color: var(--sem-risk); background: var(--card); }
   .cmp-empty { font: 500 11.5px var(--font-base); color: var(--ink-4); padding: 4px; }
@@ -199,6 +200,23 @@
   .cmp-cand .cc-done { font: 700 10px var(--font-base); color: var(--accent); background: var(--accent-soft); border-radius: var(--r-chip); padding: 2px 7px; white-space: nowrap; }
   /* 번호 배지 divIcon (스펙 §4: 지름 20px 원 · 배경=단지 색 · 흰 숫자 11px Inter bold · 링 상단) */
   .cmp-badge { transform: translate(-50%, -50%); width: 20px; height: 20px; border-radius: 50%; color: #fff; font: 700 11px/1 var(--font-num); display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+  /* ── 🎯 색 팔레트 팝오버 (스펙 v3 §3.3 · T8) — #cmpBox 앵커(행 바로 아래), 패널 내부라 지도와 겹침 없음 ── */
+  #cmpBox { position: relative; }
+  #cmpPalette { position: absolute; left: 0; right: 0; z-index: 600; background: var(--canvas); border: 1px solid var(--hairline); border-radius: var(--r); box-shadow: var(--elev-float); padding: 12px; }
+  #cmpPalette[hidden] { display: none; }
+  .cp-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+  .cp-title { font: 700 11.5px var(--font-base); color: var(--ink-2); }
+  #cpAll { appearance: none; font: 600 11px var(--font-base); color: var(--accent); background: var(--accent-soft); border: 1px solid var(--hairline); border-radius: var(--r-chip); padding: 4px 10px; cursor: pointer; white-space: nowrap; transition: all .14s; }
+  #cpAll:hover { border-color: var(--accent); background: var(--canvas); }
+  .cp-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; margin-bottom: 9px; }
+  .cp-sw { appearance: none; border: 1px solid var(--hairline); border-radius: 6px; height: 22px; cursor: pointer; padding: 0; transition: transform .12s; }
+  .cp-sw:hover { transform: scale(1.12); }
+  .cp-sw.on { box-shadow: 0 0 0 2px var(--canvas), 0 0 0 3.5px var(--ink-2); }
+  .cp-custom { display: flex; align-items: center; gap: 6px; }
+  .cp-custom input[type=color] { width: 36px; height: 32px; flex: 0 0 36px; padding: 2px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--canvas); cursor: pointer; }
+  .cp-custom input[type=text] { flex: 1; width: auto; min-width: 0; padding: 6px 9px; font-family: var(--font-mono); font-size: 12px; border-radius: 8px; }
+  #cpApply { appearance: none; flex: 0 0 auto; font: 600 11.5px var(--font-base); color: var(--accent); background: var(--accent-soft); border: 1px solid var(--hairline); border-radius: var(--r-chip); padding: 6px 12px; cursor: pointer; white-space: nowrap; transition: all .14s; }
+  #cpApply:hover { border-color: var(--accent); background: var(--canvas); }
   #toast { display: none; position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 900; background: rgba(25,31,40,.92); color: #fff; font-size: 12.5px; font-weight: 600; padding: 9px 18px; border-radius: var(--r-chip); box-shadow: 0 4px 16px rgba(20,24,32,.3); pointer-events: none; white-space: nowrap; }
 
   .lh-pin { transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 8px; background: #7c3aed; color: #fff; border: 2.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); font: 800 11px var(--font-base); cursor: pointer; }
@@ -444,6 +462,19 @@
       <div id="cmpAutoNote" class="cmp-note"></div>
       <div id="cmpCandidates"></div>
       <div id="cmpList"></div>
+      <!-- 🎯 색 팔레트 팝오버 (T8) — 칩 클릭 시 행 아래 노출 · 9색 프리셋+커스텀 hex+전체 단일색 -->
+      <div id="cmpPalette" hidden>
+        <div class="cp-head">
+          <span class="cp-title">단지 색 지정</span>
+          <button id="cpAll" type="button">전체 단일색</button>
+        </div>
+        <div class="cp-grid" id="cpGrid"></div>
+        <div class="cp-custom">
+          <input type="color" id="cpColor" value="#0071e3" aria-label="커스텀 색 선택">
+          <input type="text" id="cpHex" placeholder="#RRGGBB" spellcheck="false" aria-label="커스텀 hex 입력">
+          <button id="cpApply" type="button">적용</button>
+        </div>
+      </div>
       <div class="cmp-search">
         <input type="text" id="cmpSearch" placeholder="단지명 일부 입력 후 추가">
         <button id="cmpAdd" type="button">추가</button>
@@ -722,6 +753,7 @@ function removeCompetitor(i){
   const at = competitors.findIndex(c => c.i === Number(i));
   if(at < 0) return;
   competitors.splice(at, 1);
+  if(cmpPalFor === Number(i)) closeCmpPalette();   // 열려 있던 단지 제거 = 팝오버도 닫힘
   renderCmp(); saveCompetitors();
 }
 function toggleCompetitor(idx, apt){       // 모드 ON 마커 클릭 — 선택↔해제 토글만
@@ -750,7 +782,7 @@ function renderCmp(){                      // cmpLayer 재렌더 + 패널 목록
         `<div class="cmp-row">` +
         `<span class="cmp-num" style="background:${c.color}">${pos + 1}</span>` +
         `<span class="cmp-name" title="${c.name}">${c.name}</span>` +
-        `<span class="cmp-chip" style="background:${c.color}"></span>` +
+        `<span class="cmp-chip" style="background:${c.color}" data-i="${c.i}" title="색 변경"></span>` +
         `<button class="cmp-x" type="button" data-i="${c.i}" title="선택 해제">✕</button>` +
         `</div>`).join("")
     : `<div class="cmp-empty">선택된 단지 없음 — 모드 ON 후 마커 클릭 또는 검색 추가</div>`;
@@ -765,6 +797,45 @@ function cmpSearchAdd(){                   // doSearch 스타일 재사용 — �
   addCompetitor(idx, apt);
   map.setView([apt.lat, apt.lng], 16);
   $("cmpSearch").value = "";
+}
+
+// ── 🎯 색 팔레트 (스펙 v3 §3.3 · T8) — 9색 프리셋 + 커스텀 hex + 전체 단일색 ──
+// 색 변경 = competitors[].color 갱신 → renderCmp()가 링(circle)·배지(divIcon)·칩 3곳 동시 재렌더 → saveCompetitors() 영속화(T6 스키마 그대로)
+const CMP_PALETTE = ["#0071E3", "#3182ce", "#38a169", "#d69e2e", "#dd6b20", "#e53e3e", "#7c3aed", "#db2777", "#0d9488"];   // §3.3 순서 정본
+let cmpPalFor = null;                // 팔레트 열려 있는 단지 i (null = 닫힘)
+function cmpNormHex(raw){            // "#RRGGBB" 정규화 — 6자리 hex 아니면 null (3자리·이름 색 미지원)
+  const m = String(raw).trim().match(/^#?([0-9a-fA-F]{6})$/);
+  return m ? "#" + m[1].toLowerCase() : null;
+}
+function syncCmpPaletteUI(){         // 열려 있는 단지의 현재 색 → 피커·hex 입력·프리셋 선택 표시
+  const c = competitors.find(x => x.i === cmpPalFor);
+  const hex = c ? (cmpNormHex(c.color) || CMP_DEFAULT_COLOR) : CMP_DEFAULT_COLOR;
+  $("cpColor").value = hex;          // input[type=color]는 #rrggbb 소문자만 수용
+  $("cpHex").value = hex;
+  $("cpGrid").querySelectorAll(".cp-sw").forEach(b => b.classList.toggle("on", b.dataset.c.toLowerCase() === hex));
+}
+function openCmpPalette(i, rowEl){   // 칩 클릭 = 행 바로 아래 팝오버 (#cmpBox position:relative 앵커)
+  const c = competitors.find(x => x.i === Number(i));
+  if(!c) return;
+  cmpPalFor = c.i;
+  syncCmpPaletteUI();
+  const pal = $("cmpPalette");
+  pal.hidden = false;
+  pal.style.top = (rowEl.offsetTop + rowEl.offsetHeight + 6) + "px";
+}
+function closeCmpPalette(){ cmpPalFor = null; $("cmpPalette").hidden = true; }
+function setCmpColor(i, color){      // 링·배지·칩 즉시 재렌더 + 영속화 (renderCmp가 3곳 전부 재생성 — 누락 레이어 없음)
+  const c = competitors.find(x => x.i === Number(i));
+  if(!c) return;
+  c.color = color;
+  renderCmp(); saveCompetitors();
+}
+function applyCmpHex(raw){           // 커스텀 hex 적용 — 잘못된 입력 = 기본색 폴백 + 토스트 (스펙 ④)
+  if(cmpPalFor == null) return;
+  const hex = cmpNormHex(raw);
+  if(hex) setCmpColor(cmpPalFor, hex);
+  else { setCmpColor(cmpPalFor, CMP_DEFAULT_COLOR); showToast("잘못된 색 코드 — 기본색(" + CMP_DEFAULT_COLOR + ") 적용"); }
+  syncCmpPaletteUI();
 }
 
 // ── 🎯 자동 추천 (스펙 v3 §6.7 정본) — 순수 클라이언트 집계·외부 API 0 ──
@@ -933,7 +1004,36 @@ function initMap(){
   // 🎯 경쟁단지 — 검색 추가·목록 ✕ 제거(위임: 행은 renderCmp 재생성)
   $("cmpAdd").addEventListener("click", cmpSearchAdd);
   $("cmpSearch").addEventListener("keydown", e => { if(e.key === "Enter") cmpSearchAdd(); });
-  $("cmpList").addEventListener("click", e => { const b = e.target.closest(".cmp-x"); if(b) removeCompetitor(Number(b.dataset.i)); });
+  $("cmpList").addEventListener("click", e => {
+    const b = e.target.closest(".cmp-x"); if(b){ removeCompetitor(Number(b.dataset.i)); return; }
+    const chip = e.target.closest(".cmp-chip");           // 🎯 T8: 칩 클릭 = 팔레트 팝오버
+    if(chip){ const row = chip.closest(".cmp-row"); if(row) openCmpPalette(Number(chip.dataset.i), row); }
+  });
+  // 🎯 색 팔레트 (T8) — 프리셋 채움·스와치 선택·커스텀 hex·전체 단일색·바깥 클릭 닫힘
+  $("cpGrid").innerHTML = CMP_PALETTE.map(c => `<button class="cp-sw" type="button" data-c="${c}" style="background:${c}" title="${c}"></button>`).join("");
+  $("cmpPalette").addEventListener("click", e => {
+    const sw = e.target.closest(".cp-sw");
+    if(sw && cmpPalFor != null){ setCmpColor(cmpPalFor, cmpNormHex(sw.dataset.c)); syncCmpPaletteUI(); }
+  });
+  $("cpAll").addEventListener("click", () => {            // 전체 단일색 = 선택 단지 전부 #0071E3 (스펙 §3.3)
+    if(!competitors.length) return;
+    competitors.forEach(c => c.color = CMP_DEFAULT_COLOR);
+    renderCmp(); saveCompetitors(); syncCmpPaletteUI();
+    showToast("전체 단지에 기본색(" + CMP_DEFAULT_COLOR + ") 적용");
+  });
+  $("cpColor").addEventListener("input", e => {           // 네이티브 컬러 피커 = 즉시 적용 (hex 입력과 병행)
+    if(cmpPalFor == null) return;
+    setCmpColor(cmpPalFor, cmpNormHex(e.target.value) || CMP_DEFAULT_COLOR);
+    syncCmpPaletteUI();
+  });
+  $("cpHex").addEventListener("keydown", e => { if(e.key === "Enter") applyCmpHex(e.target.value); });
+  $("cpApply").addEventListener("click", () => applyCmpHex($("cpHex").value));
+  document.addEventListener("click", e => {               // 바깥 클릭 = 닫힘 (스펙 ⑤) — 칩 클릭(열기)·팝오버 내부는 제외
+    if($("cmpPalette").hidden) return;
+    if(e.target.closest("#cmpPalette") || e.target.closest(".cmp-chip")) return;
+    closeCmpPalette();
+  });
+  document.addEventListener("keydown", e => { if(e.key === "Escape" && !$("cmpPalette").hidden) closeCmpPalette(); });
   // 🎯 자동 추천 (스펙 §6.7) — site 없는 region 번들은 비활성 + 안내 문구
   {
     const site = D.meta && D.meta.site;
