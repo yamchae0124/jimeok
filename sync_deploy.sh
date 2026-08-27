@@ -17,6 +17,23 @@ cd "$(dirname "$0")"
 DEPLOY="_deploy"
 mkdir -p "$DEPLOY"
 
+# ── 디렉터리 미러 (rsync 폴백) ──
+# 윈도우 Git Bash 에는 rsync 가 없다(2026-08-27 실측) — 없으면 cp 로 같은 결과를 낸다.
+# 맥은 rsync 가 있으니 그대로 쓴다. 대상은 둘 다 _deploy/ 안의 순수 미러라 통째 재생성이 안전하다.
+mirror(){  # $1=원본 디렉터리  $2=대상 디렉터리
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --delete "$1/" "$2/"
+  else
+    # ⚠️ 디렉터리 통째 rm -rf 는 쓰지 않는다 — Dropbox 가 폴더를 잡고 있어
+    #    "Device or resource busy" 로 죽는다(2026-08-27 실측). 덮어쓰고 잔재만 지운다.
+    mkdir -p "$2"
+    cp -R "$1/." "$2/"
+    ( cd "$2" && find . -type f -print ) | while IFS= read -r rel; do
+      [ -e "$1/${rel#./}" ] || rm -f "$2/${rel#./}"
+    done
+  fi
+}
+
 # ── 허용 파일 명시 (정본 HTML/뷰어 + export 모듈 + 데이터 js 9종 + vendor) ──
 # index.html = ROOT 정본(랜딩+허브 통합). map_leaflet.html = 단일지역 정본이자 ?region= 뷰어 겸용.
 # exporter.js + vendor/ = 브라우저 내보내기 모듈(html2canvas·xlsx·pptxgenjs).
@@ -45,7 +62,7 @@ for f in "${ALLOW[@]}"; do
   if [[ -d "$f" ]]; then
     # 디렉터리 항목(vendor) — 미러 동기화
     mkdir -p "$DEPLOY/$f"
-    rsync -a --delete "$f/" "$DEPLOY/$f/"
+    mirror "$f" "$DEPLOY/$f"
     echo "  ✓ $f/ (디렉터리 미러)"
     continue
   fi
@@ -60,7 +77,7 @@ done
 # build_hub.py 산출물. 없으면 레벨 A만 동기화 (허브는 fetch 실패 상태로 안내).
 if [[ -f "regions/index.json" ]]; then
   mkdir -p "$DEPLOY/regions"
-  rsync -a --delete regions/ "$DEPLOY/regions/"
+  mirror regions "$DEPLOY/regions"
   n_regions=$(find "$DEPLOY/regions" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
   echo "  ✓ regions/ 미러 ($n_regions 개 지역 번들 + index.json)"
 else
