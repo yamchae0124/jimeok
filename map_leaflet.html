@@ -758,14 +758,20 @@ const CMP = { weight:3, fillOpacity:0.50, radius_m:300 };
 const CMP_MAX = 9;                 // R-M10: 비교단지 상한
 const CMP_DEFAULT_COLOR = "#0071E3";   // 신규 선택 기본색(단일) — 색 지정 UI는 T8
 // cors (스펙 v3 §5 캡처 프리셋): 타일 서버가 Access-Control-Allow-Origin을 보내는가.
-//   true  = cartocdn 3종(voyager·dark·minimal) + arcgisonline(sat) → canvas 캡처 시 타일 오염 없음
-//   false = tile.openstreetmap.org(osm)·opentopomap(terrain) → ACAO 헤더 없음 → 캡처 불가(차단+전환 제안)
+//   🔴 2026-08-27 실측 정정 2건 —
+//   ① CARTO(cartocdn) 3종이 **타일 이미지에 "API KEY REQUIRED" 워터마크를 구워** 보내기 시작했다.
+//      HTTP 200 이고 CORS 도 정상이라 코드로는 안 잡히는데, 눈으로 보면 지도 전체가 워터마크다.
+//      → **표준 탭을 Wikimedia(osm-intl)로 교체**했다. dark·minimal 은 CARTO 라 아직 워터마크가 있다.
+//   ② tile.openstreetmap.org 는 이제 **ACAO=* 를 보낸다**(정책이 바뀐 듯). 옛 주석의 "ACAO 헤더 없음"은
+//      반증됐다 → `osm.cors` 를 true 로 정정. (⚠️ 볼런티어 서버라 UA 없는 요청은 418 로 막는다 — 브라우저는 정상)
+//   실측 = z14/x13966/y6345(신목동) 타일 직접 내려받아 육안 대조. Esri Street/Gray 는 한국에서
+//   "Map data not yet available" 회색 타일이라 후보에서 뺐다(위성 World_Imagery 는 정상).
 const BASEMAPS = {
-  voyager: { url:"https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20, cors:true },
-  osm:     { url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png", attr:"© OpenStreetMap contributors", sub:"abc", maxZoom:19, cors:false },
-  dark:    { url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20, cors:true },
+  voyager: { url:"https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png", attr:"© OpenStreetMap © Wikimedia", sub:"", maxZoom:19, cors:true },  // 2026-08-27 CARTO→Wikimedia (CARTO 워터마크)
+  osm:     { url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png", attr:"© OpenStreetMap contributors", sub:"abc", maxZoom:19, cors:true },   // 2026-08-27 ACAO=* 실측 → false→true
+  dark:    { url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20, cors:true },  // ⚠️ CARTO — 2026-08-27 현재 "API KEY REQUIRED" 워터마크
   sat:     { url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr:"Tiles © Esri · Maxar · Earthstar Geographics", sub:"", maxZoom:19, cors:true },
-  minimal: { url:"https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20, cors:true },
+  minimal: { url:"https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20, cors:true },  // ⚠️ CARTO — 2026-08-27 현재 "API KEY REQUIRED" 워터마크
   terrain: { url:"https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", attr:"© OpenStreetMap, SRTM · © OpenTopoMap", sub:"abc", maxZoom:17, cors:false },
 };
 function setBasemap(key){
@@ -1941,13 +1947,22 @@ function setReportMode(on){
   document.body.classList.toggle("report-mode", on);
   if(on){
     const jeonse = dealMode() === "jeonse";
-    $("roTitle").textContent = `${D.meta.region} 사업지 반경 ${jeonse ? "전세 보증금" : "실거래"} 현황`;
+    // 2026-08-25 — 헤드리스 캡처용 라벨 주입. `?region=` 번들은 meta.region 이 코드(11110)이고
+    // meta.site_query 가 비어 있어 제목이 "11110 사업지 …", 부제가 "사업지: " 로 나왔다.
+    // 분양성검토 8p에 박으려면 사업지 이름·주소가 필요하다. URL 이 있으면 URL 이 이긴다.
+    //   ?title=상도역 대우 엑소디움   ?addr=서울 동작구 상도동 123
+    const _qs = new URLSearchParams(location.search);
+    const _title = _qs.get("title");
+    const _addr = _qs.get("addr");
+    $("roTitle").textContent = _title
+      ? `${_title} 반경 ${jeonse ? "전세 보증금" : "실거래"} 현황`
+      : `${D.meta.region} 사업지 반경 ${jeonse ? "전세 보증금" : "실거래"} 현황`;
     const period = $("fPeriod").selectedOptions[0].textContent;
     const age = $("fAge").selectedOptions[0].textContent;
     const stats = radiusStats(aggregate(applyFilters()));
     const s1 = stats && stats[0].n ? ` · 반경 1km 평균 ${fmtPP(stats[0].avg)}만/평` : "";
     $("roSub").innerHTML =
-      `사업지: ${D.meta.site_query}<br>` +
+      `사업지: ${_addr || D.meta.site_query || "—"}<br>` +
       `국토부 실거래가(${jeonse ? "전세" : "매매"}) · ${D.meta.generated_at} 수집 · ${period}` +
       (age === "전체" ? "" : ` · 연식 ${age}`) + s1 +
       `<br>숫자 = 전용 ${jeonse ? "평당 보증금" : "평당가"}(만원)` + (jeonse ? "" : " · 해제거래 제외") + (!jeonse && excludeDirect() && (D.trades||[]).some(t=>t.dr) ? " · 직거래 제외" : "") + districtSrcLine() + commuteLine();
@@ -2051,19 +2066,61 @@ function doSearch(){
   map.setView([hit.lat, hit.lng], 16);
 }
 
+// ── 사업지 핀 + 반경원 ────────────────────────────────────────────────
+// 2026-08-25 확장 — **URL 파라미터로 사업지·반경을 주입할 수 있다.**
+//   왜: `?region=` 번들 모드는 map_data.js 의 meta.site 가 null 이라 placeSite 가 즉시 return 했고,
+//       그래서 헤드리스 캡처(export_deliverables.capture_map)로 뽑은 그림엔 **반경원이 없었다.**
+//       분양성검토 8p의 "주소 한 줄 → 3km 반경 입지도"가 여기서 막혀 있었다.
+//   사용: ?site=37.3934,126.9859        → 그 좌표를 사업지로
+//         &radius=3000                  → 3km 원 하나만
+//         &radius=500,1000,2000         → 여러 겹 (기본은 1/2/3km)
+//         &report=1                     → 보고서 모드 자동 진입(패널 숨김·범례 오버레이)
+//   URL 이 있으면 URL 이 이긴다. 없으면 종전대로 meta.site 를 쓴다(기존 동작 100% 보존).
 function placeSite(site){
+  const qs = new URLSearchParams(location.search);
+
+  // ① 좌표 — URL 우선
+  const rawSite = qs.get("site");
+  if (rawSite) {
+    const p = rawSite.split(",").map(s => parseFloat(s.trim()));
+    if (p.length === 2 && isFinite(p[0]) && isFinite(p[1])) site = { lat: p[0], lng: p[1] };
+    else console.warn("[jimeok] ?site 파싱 실패 — 'lat,lng' 형식이어야 한다:", rawSite);
+  }
   if(!(site && site.lat)) return;
+
+  // ② 반경 — URL 우선. 기본은 종전 1/2/3km
+  let radii = [1000, 2000, 3000];
+  const rawRad = qs.get("radius");
+  if (rawRad) {
+    const rs = rawRad.split(",").map(s => parseInt(s.trim(), 10)).filter(n => isFinite(n) && n > 0);
+    if (rs.length) radii = rs.sort((a, b) => a - b);
+    else console.warn("[jimeok] ?radius 파싱 실패 — 미터 정수여야 한다:", rawRad);
+  }
+  // 투명도: 안쪽이 진하고 바깥이 옅게. 개수가 몇이든 고르게 배분.
+  const opFor = i => Math.max(0.03, 0.08 - i * 0.025);
+
   const icon = L.divIcon({ className:"apt-divicon", html:`<div class="sitepin"></div>`, iconSize:[0,0], iconAnchor:[0,0] });
   L.marker([site.lat, site.lng], { icon, zIndexOffset: 1000 })
     .bindTooltip("SITE", { permanent:true, direction:"bottom", offset:[0,9], className:"site-label" })
     .addTo(map);
-  [[1000,0.08],[2000,0.05],[3000,0.03]].forEach(([rad,op]) => {
-    L.circle([site.lat, site.lng], { radius: rad, color:"#0071E3", weight:1.5, opacity:0.7, fillColor:"#0071E3", fillOpacity:op, dashArray:"4 4" }).addTo(map);
+  radii.forEach((rad, i) => {
+    L.circle([site.lat, site.lng], { radius: rad, color:"#0071E3", weight:1.5, opacity:0.7, fillColor:"#0071E3", fillOpacity:opFor(i), dashArray:"4 4" }).addTo(map);
     // 원 상단에 거리 태그 (보고서 캡처 시 반경 식별용)
-    const tag = L.divIcon({ className:"apt-divicon", html:`<div class="radius-tag">${rad/1000}km</div>`, iconSize:[0,0], iconAnchor:[0,0] });
+    const label = rad >= 1000 ? (rad / 1000) + "km" : rad + "m";
+    const tag = L.divIcon({ className:"apt-divicon", html:`<div class="radius-tag">${label}</div>`, iconSize:[0,0], iconAnchor:[0,0] });
     L.marker([site.lat + rad/111320, site.lng], { icon: tag, interactive: false }).addTo(map);
   });
-  map.setView([site.lat, site.lng], 14);
+
+  // ③ 줌 — 가장 큰 반경이 화면에 들어오도록. 종전 고정 14는 3km 원을 잘랐다.
+  const maxr = radii[radii.length - 1];
+  const zoom = maxr <= 800 ? 15 : maxr <= 1600 ? 14 : maxr <= 3200 ? 13 : maxr <= 6400 ? 12 : 11;
+  map.setView([site.lat, site.lng], zoom);
+
+  // ④ 보고서 모드 자동 진입 (헤드리스 캡처용 — 사람 클릭 없이 오버레이가 붙는다)
+  if (qs.get("report") === "1") {
+    try { setTimeout(() => setReportMode(true), 0); }
+    catch (e) { console.warn("[jimeok] setReportMode 실패", e); }
+  }
 }
 
 // ── 🚦 그돈씨 판정 레이어 ──────────────────────────────────
