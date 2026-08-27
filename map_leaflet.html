@@ -761,17 +761,21 @@ const CMP_DEFAULT_COLOR = "#0071E3";   // 신규 선택 기본색(단일) — �
 //   🔴 2026-08-27 실측 정정 2건 —
 //   ① CARTO(cartocdn) 3종이 **타일 이미지에 "API KEY REQUIRED" 워터마크를 구워** 보내기 시작했다.
 //      HTTP 200 이고 CORS 도 정상이라 코드로는 안 잡히는데, 눈으로 보면 지도 전체가 워터마크다.
-//      → **표준 탭을 Wikimedia(osm-intl)로 교체**했다. dark·minimal 은 CARTO 라 아직 워터마크가 있다.
+//      → **표준 탭을 Wikimedia(osm-intl)로 교체**했고, dark·minimal 은 **무료 CARTO 키(CARTO_KEY)** 를 붙여 없앴다.
+//      ⚠️ 키가 틀리거나 비면 **에러 없이 200 + 워터마크 타일**이 그대로 온다(실측). 코드로 못 잡으니 눈으로 볼 것.
 //   ② tile.openstreetmap.org 는 이제 **ACAO=* 를 보낸다**(정책이 바뀐 듯). 옛 주석의 "ACAO 헤더 없음"은
 //      반증됐다 → `osm.cors` 를 true 로 정정. (⚠️ 볼런티어 서버라 UA 없는 요청은 418 로 막는다 — 브라우저는 정상)
 //   실측 = z14/x13966/y6345(신목동) 타일 직접 내려받아 육안 대조. Esri Street/Gray 는 한국에서
 //   "Map data not yet available" 회색 타일이라 후보에서 뺐다(위성 World_Imagery 는 정상).
+// CARTO 베이스맵 키 — carto.com/basemaps/apikey 에서 계정 없이 무료 발급(월 500만 타일, 비상업 전제).
+// 클라이언트 노출 전제의 공개 키다(도메인 등록형). 비우면 워터마크가 돌아온다.
+const CARTO_KEY = "cb1_29f7_1_e85607d4d01e6343b0abf86f";
 const BASEMAPS = {
   voyager: { url:"https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png", attr:"© OpenStreetMap © Wikimedia", sub:"", maxZoom:19, cors:true },  // 2026-08-27 CARTO→Wikimedia (CARTO 워터마크)
   osm:     { url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png", attr:"© OpenStreetMap contributors", sub:"abc", maxZoom:19, cors:true },   // 2026-08-27 ACAO=* 실측 → false→true
-  dark:    { url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20, cors:true },  // ⚠️ CARTO — 2026-08-27 현재 "API KEY REQUIRED" 워터마크
+  dark:    { url:`https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`, attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20, cors:true },  // 2026-08-27 키 적용 — 워터마크 제거 실측
   sat:     { url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr:"Tiles © Esri · Maxar · Earthstar Geographics", sub:"", maxZoom:19, cors:true },
-  minimal: { url:"https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20, cors:true },  // ⚠️ CARTO — 2026-08-27 현재 "API KEY REQUIRED" 워터마크
+  minimal: { url:`https://{s}.basemaps.cartocdn.com/rastertiles/light_nolabels/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`, attr:"© OpenStreetMap © CARTO", sub:"abcd", maxZoom:20, cors:true },  // 2026-08-27 키 적용 — 워터마크 제거 실측
   terrain: { url:"https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", attr:"© OpenStreetMap, SRTM · © OpenTopoMap", sub:"abc", maxZoom:17, cors:false },
 };
 function setBasemap(key){
